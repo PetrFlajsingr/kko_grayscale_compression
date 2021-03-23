@@ -2,8 +2,8 @@
 // Created by petr on 3/23/21.
 //
 
-#ifndef KKO_GRAYSCALE_COMPRESSION__RAWGRAYSCALEIMAGEDATAREADER_H
-#define KKO_GRAYSCALE_COMPRESSION__RAWGRAYSCALEIMAGEDATAREADER_H
+#ifndef PF_HUFF_CODEC__RAWGRAYSCALEIMAGEDATAREADER_H
+#define PF_HUFF_CODEC__RAWGRAYSCALEIMAGEDATAREADER_H
 
 #include <concepts>
 #include <filesystem>
@@ -77,9 +77,6 @@ class RawGrayscaleImageDataReader::Sentinel {
   Sentinel &operator=(const Sentinel &other) = default;
   Sentinel(Sentinel &&other) = default;
   Sentinel &operator=(Sentinel &&other) = default;
-
- private:
-  std::istreambuf_iterator<char> sentinelIter{};
 };
 
 static_assert(std::input_iterator<RawGrayscaleImageDataReader::Iterator>);

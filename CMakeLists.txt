@@ -48,12 +48,17 @@ set(SOURCES
         main.cpp
         args/ValidPathCheckAction.cpp
         RawGrayscaleImageDataReader.cpp
+        encoding.cpp
+        decoding.cpp
         )
 
 set(INCLUDES
         main.cpp
         args/ValidPathCheckAction.h
         RawGrayscaleImageDataReader.h
+        encoding.h
+        decoding.h
+        Tree.h
         )
 
 if (CMAKE_BUILD_TYPE MATCHES ASAN)
