@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.17)
-project(kko_grayscale_compression)
+project(huff_codec)
 
 set(CMAKE_CXX_STANDARD 20)
 list(APPEND flags "-fconcepts" "-fconcepts-diagnostics-depth=10" "-fcoroutines" "-Werror=return-type"
@@ -47,11 +47,13 @@ endif ()
 set(SOURCES
         main.cpp
         args/ValidPathCheckAction.cpp
+        RawGrayscaleImageDataReader.cpp
         )
 
 set(INCLUDES
         main.cpp
         args/ValidPathCheckAction.h
+        RawGrayscaleImageDataReader.h
         )
 
 if (CMAKE_BUILD_TYPE MATCHES ASAN)
@@ -63,9 +65,9 @@ endif ()
 add_compile_definitions(FMT_HEADER_ONLY)
 include_directories(include)
 
-add_executable(kko_grayscale_compression ${SOURCES})
-target_compile_options(kko_grayscale_compression PRIVATE ${flags})
-target_link_libraries(kko_grayscale_compression ${LASAN})
+add_executable(huff_codec ${SOURCES})
+target_compile_options(huff_codec PRIVATE ${flags})
+target_link_libraries(huff_codec ${LASAN})
 
 if (MEASURE_BUILD_TIME)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")

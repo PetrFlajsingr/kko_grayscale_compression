@@ -10,9 +10,10 @@
 enum class PathType { File, Directory };
 
 struct ValidPathCheckAction {
-  explicit ValidPathCheckAction(PathType pathType);
+  explicit ValidPathCheckAction(PathType pathType, bool mustExist);
   std::filesystem::path operator()(std::string_view pathStr) const;
   const PathType type;
+  const bool exists;
 };
 
 #endif//VOXEL_RENDER_VALIDPATHCHECKACTION_H
