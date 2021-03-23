@@ -10,6 +10,7 @@
 #include <optional>
 #include <span>
 
+// ovladani logovani - zapisuje pouze do stdout
 #define ENABLE_LOG 1
 
 enum class AppMode { Compress, Decompress };
@@ -44,6 +45,7 @@ std::optional<argparse::ArgumentParser> parseArgs(std::span<char *> args) {
 }
 
 int main(int argc, char **argv) {
+  spdlog::set_pattern("[%H:%M:%S.%f] [%l] [thread %t] %v");
 #if ENABLE_LOG == 0
   spdlog::set_level(spdlog::level::off);
 #else
@@ -62,7 +64,9 @@ int main(int argc, char **argv) {
   const auto useModel = args->get<bool>("-m");
   spdlog::info("Input file: {}, image width: {}, mode: {}, using model: {}", inputFilePath.string(), imageWidth,
                magic_enum::enum_name(mode), useModel);
+
   auto data = RawGrayscaleImageDataReader{inputFilePath, imageWidth}.readAllRaw();
+  spdlog::trace("Read data, total length: {}[B]", data.size());
 
   if (mode == AppMode::Compress) {
     if (useModel) {

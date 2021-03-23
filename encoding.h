@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <concepts>
 #include <queue>
+#include <spdlog/spdlog.h>
 #include <vector>
 
 template<typename T, typename ValueType>
@@ -77,9 +78,13 @@ Tree<TreeData<T>> buildTree(const pf::Iterable auto &histogram) {
 
 template<std::integral T, typename Model = IdentityModel<T>>
 std::vector<uint8_t> encodeStatic(pf::Iterable auto &&data, Model &&model = Model{}) {
+  spdlog::info("Starting static encoding");
   std::ranges::transform(data, std::begin(data), model);
+  spdlog::trace("Applied model");
   const auto histogram = createHistogram<uint8_t>(data);
+  spdlog::trace("Created histogram");
   [[maybe_unused]] auto tree = buildTree<T>(histogram);
+  spdlog::info("Built tree");
   [[maybe_unused]] auto cnt = countNodes(tree.getRoot());
   return {};
 }
