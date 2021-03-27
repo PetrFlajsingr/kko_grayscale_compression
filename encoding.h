@@ -146,6 +146,14 @@ void transformCodes(std::vector<std::pair<T, std::vector<bool>>> &codes) {
   }
 }
 
+/**
+ * @details Model je concept kvuli optimalizacim - napriklad pro IdentityModel dojde k optimalizaci cele transformace
+ * pryc a tim se usetri cas v runtime. Dynamickeho polymorfismu se da snadno dosahnout bez modifikace teto funkce.
+ * @tparam Model
+ * @param data
+ * @param model
+ * @return
+ */
 template<std::integral T, typename Model = IdentityModel<T>>
 std::vector<uint8_t> encodeStatic(std::ranges::forward_range auto &&data, Model &&model = Model{}) {
   spdlog::info("Starting static encoding");
@@ -171,6 +179,8 @@ std::vector<uint8_t> encodeStatic(std::ranges::forward_range auto &&data, Model 
     byteTable[symbol] = code;
     byteHeader[code.size()].emplace_back(symbol);
   });
+  spdlog::info("Created header");
+  spdlog::trace("Start binary encoding");
 
   auto binEncoder = BinaryEncoder<uint8_t>{};
 
@@ -182,15 +192,14 @@ std::vector<uint8_t> encodeStatic(std::ranges::forward_range auto &&data, Model 
   binEncoder.pushBack(paddingThing);
 
   std::ranges::for_each(byteHeader.begin() + minCodeLength, byteHeader.end(), [&binEncoder](const auto &v) {
-    {
-      const auto size = static_cast<uint8_t>(v.size());
-      binEncoder.pushBack(size);
-    }
+    const auto size = static_cast<uint8_t>(v.size());
+    binEncoder.pushBack(size);
   });
   std::ranges::for_each(byteHeader, [&binEncoder](auto val) { binEncoder.pushBack(val); });
   std::ranges::for_each(data, [&binEncoder, &byteTable](const auto &in) { binEncoder.pushBack(byteTable[in]); });
 
   binEncoder.shrinkToFit();
+  spdlog::info("Data encoded, total length: {}[b]", binEncoder.size());
   return binEncoder.releaseData();
 }
 
