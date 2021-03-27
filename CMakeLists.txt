@@ -71,7 +71,10 @@ add_compile_definitions(FMT_HEADER_ONLY)
 include_directories(include)
 
 add_executable(huff_codec ${SOURCES})
+add_executable(test test.cpp)
+
 target_compile_options(huff_codec PRIVATE ${flags})
+target_compile_options(test PRIVATE ${flags})
 target_link_libraries(huff_codec ${LASAN})
 
 if (MEASURE_BUILD_TIME)

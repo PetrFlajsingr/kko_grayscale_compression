@@ -53,6 +53,9 @@ class Node {
   [[nodiscard]] bool hasRight() const { return right != nullptr; }
   [[nodiscard]] const std::experimental::observer_ptr<Node> &getParent() const { return parent; }
 
+  [[nodiscard]] bool isLeaf() const { return left == nullptr && right == nullptr; }
+  [[nodiscard]] bool hasChildren() const { return hasRight() || hasLeft(); }
+
   bool operator<(const Node &rhs) const requires std::totally_ordered<T> { return value < rhs.value; }
   bool operator>(const Node &rhs) const requires std::totally_ordered<T> { return rhs < *this; }
   bool operator<=(const Node &rhs) const requires std::totally_ordered<T> { return !(rhs < *this); }

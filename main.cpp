@@ -69,11 +69,14 @@ int main(int argc, char **argv) {
   spdlog::trace("Read data, total length: {}[B]", data.size());
 
   if (mode == AppMode::Compress) {
+    auto encodedData = std::vector<uint8_t>{};
     if (useModel) {
-      encodeStatic<uint8_t>(std::move(data), NeighborDifferenceModel<uint8_t>{});
+      encodedData = encodeStatic<uint8_t>(std::move(data), NeighborDifferenceModel<uint8_t>{});
     } else {
-      encodeStatic<uint8_t>(std::move(data));
+      encodedData = encodeStatic<uint8_t>(std::move(data));
     }
+    auto ostream = std::ofstream("/home/petr/CLionProjects/kko_grayscale_compression/output/test.compressed_mine", std::ios::binary);
+    ostream.write(reinterpret_cast<const char *>(encodedData.data()), encodedData.size());
   }
   return 0;
 }
