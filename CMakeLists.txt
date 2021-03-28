@@ -64,8 +64,7 @@ else ()
     set(SAN_LIB)
 endif ()
 
-add_compile_definitions(FMT_HEADER_ONLY)
-include_directories(include)
+include_directories(libs)
 
 add_executable(huff_codec ${SOURCES})
 add_executable(test test.cpp)

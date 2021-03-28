@@ -1,3 +1,4 @@
+#define FMT_HEADER_ONLY
 #include "RawGrayscaleImageDataReader.h"
 #include "Tree.h"
 #include "argparse.hpp"
@@ -6,8 +7,8 @@
 #include "encoding.h"
 #include "magic_enum.hpp"
 #include "spdlog/spdlog.h"
-#include <fmt/core.h>
-#include <fmt/ostream.h>
+#include "fmt/core.h"
+#include "fmt/ostream.h"
 #include <optional>
 #include <span>
 
