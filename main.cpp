@@ -3,12 +3,12 @@
 #include "Tree.h"
 #include "argparse.hpp"
 #include "args/ValidPathCheckAction.h"
-#include "decoding.h"
-#include "encoding.h"
-#include "magic_enum.hpp"
-#include "spdlog/spdlog.h"
 #include "fmt/core.h"
 #include "fmt/ostream.h"
+#include "magic_enum.hpp"
+#include "spdlog/spdlog.h"
+#include "static_decoding.h"
+#include "static_encoding.h"
 #include <optional>
 #include <span>
 

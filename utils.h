@@ -114,8 +114,7 @@ void forEachBit_n(const T &value, std::size_t n, std::invocable<bool> auto fnc) 
   for (int i = bitSize - 1; i >= static_cast<int>(bitSize - n); --i) { fnc(value & (T{1} << i)); }
 }
 
-
-inline void writeToFile(const std::filesystem::path &path, const std::string& text) {
+inline void writeToFile(const std::filesystem::path &path, const std::string &text) {
   auto ostream = std::ofstream(path);
   ostream << text;
 }

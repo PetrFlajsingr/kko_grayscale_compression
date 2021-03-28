@@ -7,8 +7,8 @@
 
 #include "RawGrayscaleImageDataReader.h"
 #include "args/ValidPathCheckAction.h"
-#include "decoding.h"
-#include "encoding.h"
+#include "static_decoding.h"
+#include "static_encoding.h"
 #include <argparse.hpp>
 #define ANKERL_NANOBENCH_IMPLEMENT
 #include <fmt/ostream.h>

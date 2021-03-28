@@ -51,8 +51,8 @@ set(INCLUDES
         main.cpp
         args/ValidPathCheckAction.h
         RawGrayscaleImageDataReader.h
-        encoding.h
-        decoding.h
+        static_encoding.h
+        static_decoding.h
         Tree.h
         )
 
