@@ -6,14 +6,23 @@
 #define HUFF_CODEC__UTILS_H
 
 #include <algorithm>
+#include <filesystem>
+#include <fstream>
 #include <ranges>
 
+namespace pf::kko {
+/**
+ * Constexpr power of for meta programming.
+ */
 constexpr auto constexpr_pow(std::integral auto base, std::integral auto power) {
   auto result = decltype(base){1};
   while (power--) { result *= base; }
   return result;
 }
 
+/**
+ * Amount of values which can be represented by T (basically memory bit size.
+ */
 template<std::integral T>
 constexpr auto ValueCount = constexpr_pow(2, sizeof(T) * 8);
 
@@ -25,16 +34,12 @@ concept RelationComparable = requires(T a, T b) {
   ->std::convertible_to<bool>;
 };
 
-template<typename T>
-struct PriorityQueueMoveHack {
-  PriorityQueueMoveHack(T &&value) : value(std::move(value)) {}
-  mutable T value;
-  bool operator<(const PriorityQueueMoveHack &rhs) const requires std::totally_ordered<T> { return value < rhs.value; }
-  bool operator>(const PriorityQueueMoveHack &rhs) const requires std::totally_ordered<T> { return rhs < *this; }
-  bool operator<=(const PriorityQueueMoveHack &rhs) const requires std::totally_ordered<T> { return !(rhs < *this); }
-  bool operator>=(const PriorityQueueMoveHack &rhs) const requires std::totally_ordered<T> { return !(*this < rhs); }
-};
-
+/**
+ * MinMax implementation working without iterators, which proved to be an issue while using ranges due to borrowed_range requirements.
+ * @param range
+ * @param comp comparison predicate, returning true if the first value is smaller, false otherwise
+ * @return std::nullopt if the range is empty, otherwise std::pair, where first is min and second is max
+ */
 /* clang-format off */
 template<std::ranges::forward_range R, typename F = std::ranges::less>
 std::optional<std::pair<std::ranges::range_value_t<R>, std::ranges::range_value_t<R>>>
@@ -52,6 +57,9 @@ std::optional<std::pair<std::ranges::range_value_t<R>, std::ranges::range_value_
 }
 /* clang-format on */
 
+/**
+ * Inefficient conversion of T to std::vector<bool>, which is its bit representation.
+ */
 template<typename T>
 std::vector<bool> typeToBits(const T &value) {
   auto result = std::vector<bool>{};
@@ -64,16 +72,53 @@ std::vector<bool> typeToBits(const T &value) {
   return result;
 }
 
-void pushAsHeap(std::ranges::random_access_range auto &range, std::ranges::range_value_t<decltype(range)> &&value, auto compare = std::less<>()) {
+/**
+ * Convenience function for heap push.
+ * @param range heap data storage
+ * @param value value to be added
+ * @param compare comparison functions adhering to max-heap rules
+ */
+void pushAsHeap(std::ranges::random_access_range auto &range, std::ranges::range_value_t<decltype(range)> &&value,
+                auto compare = std::less<>()) {
   range.push_back(std::move(value));
   std::push_heap(std::ranges::begin(range), std::ranges::end(range), compare);
 }
 
+/**
+ * Convenience function for heap pop.
+ * @param range heap data storage
+ * @param compare comparison functions adhering to max-heap rules
+ * @return element at the top of the heap
+ */
 auto popAsHeap(std::ranges::random_access_range auto &range, auto compare = std::less<>()) {
   std::pop_heap(std::ranges::begin(range), std::ranges::end(range), compare);
   auto result = std::move(range[std::ranges::size(range) - 1]);
   range.pop_back();
   return result;
 }
+
+/**
+ * Call fnc for each bit of value.
+ */
+template<typename T>
+void forEachBit(const T &value, std::invocable<bool> auto fnc) {
+  for (int i = sizeof(T) * 8 - 1; i >= 0; --i) { fnc(value & (T{1} << i)); }
+}
+
+/**
+ * Call fnc for first n bits of value.
+ */
+template<typename T>
+void forEachBit_n(const T &value, std::size_t n, std::invocable<bool> auto fnc) {
+  constexpr auto bitSize = sizeof(T) * 8;
+  for (int i = bitSize - 1; i >= static_cast<int>(bitSize - n); --i) { fnc(value & (T{1} << i)); }
+}
+
+
+inline void writeToFile(const std::filesystem::path &path, const std::string& text) {
+  auto ostream = std::ofstream(path);
+  ostream << text;
+}
+}// namespace pf::kko
 
 #endif//HUFF_CODEC__UTILS_H

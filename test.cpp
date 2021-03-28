@@ -3,10 +3,11 @@
 //
 
 #include "BinaryEncoder.h"
+#include "utils.h"
 #include <iostream>
 int main() {
-  [[maybe_unused]] auto test = BinaryEncoder<uint8_t>();
-  test.pushBack(true);
-  test[0] = false;
+  forEachBit_n(static_cast<uint8_t>(0xF0u), 5, [] (bool a) {
+    std::cout << std::boolalpha << a << std::endl;
+  });
   return 0;
 }

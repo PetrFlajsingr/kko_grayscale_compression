@@ -10,9 +10,10 @@
 #include <spdlog/spdlog.h>
 #include <vector>
 
+namespace pf::kko {
 /**
- * Prevod ruznych reprezentaci dat v cpp na binarni data.
- * Neni prilis efektivni, i kdyz pri aktivaci optimalizaci se rychlost zvysi az o 2 rady
+ * Conversion of various data types to binary code.
+ * Not very efficient without the use of compiler optimisations.
  */
 template<std::integral T = uint8_t>
 class BinaryEncoder {
@@ -20,6 +21,9 @@ class BinaryEncoder {
   using size_type = std::size_t;
 
  private:
+  /**
+   * Proxy class for operator[] bit value setting
+   */
   class BitAccessor {
    public:
     BitAccessor(BinaryEncoder &parent, const size_type bitIndex) : parent(parent), bitIndex(bitIndex) {}
@@ -27,6 +31,10 @@ class BinaryEncoder {
       parent.setBitValue(bitIndex, newValue);
       return *this;
     }
+    /**
+     * Implicit conversion so that bool a = binEncoder[x] works
+     * @return boolean value of the bit represented by this object
+     */
     operator bool() const { return parent.getBitValue(bitIndex); }
 
    private:
@@ -38,8 +46,8 @@ class BinaryEncoder {
   BinaryEncoder() = default;
   /**
    *
-   * @param initSize pocatecni pocet nastavenych bitu
-   * @param initValue hodnota pro pocatecni nastaveni bitu
+   * @param initSize init size of memory in bits
+   * @param initValue init value for memory allocated in ctor
    */
   explicit BinaryEncoder(size_type initSize, bool initValue) : size_(initSize) {
     if (initSize != 0) {
@@ -50,7 +58,7 @@ class BinaryEncoder {
 
   /**
    *
-   * @return pocet aktivne vyuzivanych bitu
+   * @return amount of bits currently in use
    */
   [[nodiscard]] size_type size() const { return size_; }
   void resize(size_type newSize, bool initValue) {
@@ -61,33 +69,34 @@ class BinaryEncoder {
 
   /**
    *
-   * @return pocet alokovanych bitu
+   * @return amount of bits which are currently reserved in memory
    */
   [[nodiscard]] size_type capacity() const { return rawData.capacity() * TYPE_BIT_SIZE; }
 
   /**
-   * Alokace pameti
-   * @param newCapacity pozadovane mnozstvi alokovane pameti v bitech
+   *
+   * @param newCapacity desired bit count to be allocated
    */
   void reserve(size_type newCapacity) { rawData.reserve(sizeForBits(newCapacity)); }
 
   /**
-   * Pristup k hodnote bitu pomoci proxy objektu.
-   * @param bitIndex index bitu
-   * @return Proxy objekt umoznujici cteni prevodem na bool a nastaveni nove hodnoty pomoci operator=
+   * Access to bit value via a proxy object
+   * @param bitIndex
+   * @return @see BitAccessor
    */
   [[nodiscard]] BitAccessor operator[](size_type bitIndex) { return BitAccessor(*this, bitIndex); }
 
   /**
-   * Cteni hodnoty bitu na indexu
+   *
    * @param bitIndex
-   * @return hodnota bitu na indexu
+   * @return value of bit on index
    */
   [[nodiscard]] bool operator[](size_type bitIndex) const { return getBitValue(bitIndex); }
+
   /**
-   * Cteni hodnoty bitu na indexu
+   *
    * @param bitIndex
-   * @return hodnota bitu na indexu
+   * @return value of bit on index
    */
   [[nodiscard]] bool getBitValue(size_type bitIndex) const {
     const auto [index, mask] = indexAndMaskForBit(bitIndex);
@@ -95,9 +104,9 @@ class BinaryEncoder {
   }
 
   /**
-   * Nastaveni hodnoty bitu na indexu
-   * @param bitIndex index bitu
-   * @param value nova hodnota
+   *
+   * @param bitIndex
+   * @param value value to be set
    */
   void setBitValue(size_type bitIndex, bool value) {
     if (value) {
@@ -107,16 +116,29 @@ class BinaryEncoder {
     }
   }
 
+  /**
+   * Conversion of vector<bool> to binary data. Considers every element a single bit.
+   * @param data
+   */
   void pushBack(const std::vector<bool> &data) {
     for (const auto bit : data) { pushBack(bit); }
   }
 
+  /**
+   * Pushes single bit to the end.
+   * @param bit value to be pushed
+   */
   void pushBack(bool bit) {
     checkAndIncreaseCapacity();
     setBitValue(size(), bit);
     ++size_;
   }
 
+  /**
+   * Allows for direct conversion of types to bits. Not very efficient.
+   * @tparam U
+   * @param value value to be converted
+   */
   template<typename U>
   void pushBack(const U &value) {
     if constexpr (std::ranges::range<U>) {
@@ -126,16 +148,33 @@ class BinaryEncoder {
     }
   }
 
+  /**
+   * Shrink capacity to be the same as size (aligned to sizeof(T)).
+   */
   void shrinkToFit() { rawData.shrink_to_fit(); }
 
+  /**
+   * Add zero padding to the end of the data, so that size is aligned to sizeof(T)
+   */
   void addPadding() {
     for (auto i = 0; i < unusedBitsInCell(); ++i) { pushBack(false); }
   }
 
+  /**
+   *
+   * @return amount of bits which are currently unused in sizeof(T) B
+   */
   [[nodiscard]] size_type unusedBitsInCell() const { return 8 - size() % TYPE_BIT_SIZE; }
 
+  /**
+   * Direct read-only access to underlying data structure
+   */
   [[nodiscard]] const std::vector<T> &data() const { return rawData; }
 
+  /**
+   * Move data out of the object.
+   * @return vector of binary data
+   */
   [[nodiscard]] std::vector<T> releaseData() { return std::move(rawData); }
 
  private:
@@ -172,5 +211,6 @@ class BinaryEncoder {
   size_type size_{};
   std::vector<T> rawData{};
 };
+}// namespace pf::kko
 
 #endif//HUFF_CODEC__BINARYENCODER_H

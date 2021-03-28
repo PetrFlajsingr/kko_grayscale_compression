@@ -5,7 +5,8 @@
 #include "RawGrayscaleImageDataReader.h"
 #include <algorithm>
 
-RawGrayscaleImageDataReader::RawGrayscaleImageDataReader(const std::filesystem::path &src, int32_t imageWidth)
+namespace pf::kko {
+RawGrayscaleImageDataReader::RawGrayscaleImageDataReader(const std::filesystem::path &src, size_t imageWidth)
     : input(src, std::ios::binary | std::ios::in), width(imageWidth) {}
 
 std::vector<uint8_t> RawGrayscaleImageDataReader::readAllRaw() {
@@ -45,3 +46,5 @@ RawGrayscaleImageDataReader::Iterator &RawGrayscaleImageDataReader::Iterator::op
 bool RawGrayscaleImageDataReader::Iterator::operator==(const RawGrayscaleImageDataReader::Sentinel &) const {
   return fileIter == std::istreambuf_iterator<char>{};
 }
+
+}// namespace pf::kko

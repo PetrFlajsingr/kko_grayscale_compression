@@ -6,8 +6,8 @@
 #define PF_HUFF_CODEC__COMPRESSION_H
 
 #include "BinaryEncoder.h"
-#include "Iterable.h"
 #include "Tree.h"
+#include "models.h"
 #include "utils.h"
 #include <algorithm>
 #include <concepts>
@@ -16,26 +16,10 @@
 #include <spdlog/spdlog.h>
 #include <vector>
 
-template<typename T, typename ValueType>
-concept Model = std::invocable<T, ValueType> &&std::same_as<std::invoke_result_t<T, ValueType>, ValueType>;
-
-template<typename T>
-struct IdentityModel {
-  T operator()(T &value) { return value; }
-};
-
-template<typename T>
-struct NeighborDifferenceModel {
-  T operator()(T &value) {
-    const auto result = value - lastVal;
-    lastVal = value;
-    return result;
-  }
-  T lastVal{};
-};
+namespace pf::kko {
 
 template<std::integral T>
-std::array<std::size_t, ValueCount<T>> createHistogram(pf::Iterable auto &data) {
+std::array<std::size_t, ValueCount<T>> createHistogram(const std::ranges::forward_range auto &data) {
   auto result = std::array<std::size_t, ValueCount<T>>{};
   std::ranges::for_each(data, [&result](const auto value) { ++result[value]; });
   return result;
@@ -56,22 +40,31 @@ struct TreeData {
   bool operator!=(const TreeData &rhs) const { return !(rhs == *this); }
 };
 
+/**
+ * Create a huffman tree for encoding purposes.
+ * @details stl heap functions are used for code simplification
+ * @param histogram histogram of occurrences in input data
+ * @return binary tree, where leaves represent symbols
+ */
 template<std::integral T>
-Tree<TreeData<T>> buildTree(const pf::Iterable auto &histogram) {
+Tree<TreeData<T>> buildTree(const std::ranges::forward_range auto &histogram) {
   using NodeType = Node<TreeData<T>>;
+  // comparison function dereferencing ptrs
   const auto compare = [](const auto &lhs, const auto &rhs) { return *lhs > *rhs; };
 
   auto treeHeap = std::vector<std::unique_ptr<NodeType>>{};
 
-  auto counter = T{};
-
+  // counter representing an encoded symbol, could be replaced with ranges library (histogram | views::enumerate)
+  std::integral auto counter = T{};
   std::ranges::for_each(histogram, [&treeHeap, &counter, compare](const auto &occurrenceCnt) {
     if (occurrenceCnt > 0) {
       pushAsHeap(treeHeap, std::make_unique<NodeType>(TreeData<T>{counter, occurrenceCnt, true}), compare);
     }
     ++counter;
   });
+  // if the tree only has one element, add special node
   if (treeHeap.size() == 1) { pushAsHeap(treeHeap, std::make_unique<NodeType>(TreeData<T>{0, 1, false}), compare); }
+  // heap transformation to a binary tree
   while (treeHeap.size() > 1) {
     auto left = popAsHeap(treeHeap, compare);
     auto right = popAsHeap(treeHeap, compare);
@@ -86,6 +79,12 @@ Tree<TreeData<T>> buildTree(const pf::Iterable auto &histogram) {
   return result;
 }
 
+/**
+ * Implementation of huffman code creation.
+ * @param node currently inspected node
+ * @param codesForSymbols storage for results
+ * @param branchCode code from the previous levels of the tree
+ */
 template<std::integral T>
 void buildCodes(Node<TreeData<T>> &node, std::vector<std::pair<T, std::vector<bool>>> &codesForSymbols,
                 const std::vector<bool> &branchCode) {
@@ -101,6 +100,11 @@ void buildCodes(Node<TreeData<T>> &node, std::vector<std::pair<T, std::vector<bo
   if (node.hasRight()) { buildCodes(node.getRight(), codesForSymbols, rightCode); }
 }
 
+/**
+ * Create huffman code for each symbol.
+ * @param node tree root node
+ * @return vector of pairs, where pair.first is a symbol and pair.second is binary code
+ */
 template<std::integral T>
 std::vector<std::pair<T, std::vector<bool>>> buildCodes(Node<TreeData<T>> &node) {
   auto result = std::vector<std::pair<T, std::vector<bool>>>{};
@@ -108,67 +112,58 @@ std::vector<std::pair<T, std::vector<bool>>> buildCodes(Node<TreeData<T>> &node)
   return result;
 }
 
+/**
+ * Make code canonical in order to save some data space
+ * @param codes codes from buildCodes function
+ */
 template<std::integral T>
 void transformCodes(std::vector<std::pair<T, std::vector<bool>>> &codes) {
+  // sort the symbols by their code length
   std::ranges::sort(codes, [](const auto &lhs, const auto &rhs) { return lhs.second.size() < rhs.second.size(); });
 
-  auto &[unused1_, smallestBits] = codes.front();
-  const auto leftBit = smallestBits.size();
-  auto leftCode = std::size_t{};
+  auto &[unused1_, shortestCode] = codes.front();
+  const auto shortestCodeLen = shortestCode.size();
 
-  smallestBits.clear();
-  std::ranges::generate_n(std::back_inserter(smallestBits), leftBit, [] { return false; });
+  shortestCode.clear();
+  shortestCode.resize(shortestCodeLen, false);
 
   if (codes.size() <= 1) { return; }
-  auto &[unused2_, secondSmallestBits] = codes[1];
-  const auto rightBit = secondSmallestBits.size();
-  auto rightCode = (leftCode + 1) << (rightBit - leftBit);
-  auto prevLeftBit = rightBit;
-  auto prevLeftCode = rightCode;
-  secondSmallestBits.clear();
 
-  for (; rightCode != 0; rightCode >>= 1) { secondSmallestBits.template emplace_back(rightCode & 1); }
+  auto &[unused2_, secondShortestCode] = codes[1];
+  const auto secondShortestCodeOrigLen = secondShortestCode.size();
+  auto previousCodeLen = secondShortestCodeOrigLen;
+  auto previousCode = 1 << (secondShortestCodeOrigLen - shortestCodeLen);
 
-  std::ranges::generate_n(std::back_inserter(secondSmallestBits), rightBit - secondSmallestBits.size(),
-                          [] { return false; });
-  std::reverse(secondSmallestBits.begin(), secondSmallestBits.end());
+  const auto fillWithZerosAndOnePadAndReverse = [](auto &vec, auto mask, auto padLen) {
+    for (; mask != 0; mask >>= 1) { vec.template emplace_back(mask & 1); }
+    std::ranges::generate_n(std::back_inserter(vec), padLen - vec.size(), [] { return false; });
+    std::reverse(vec.begin(), vec.end());
+  };
 
-  for (std::size_t cnt = 2, idx = codes.size(); cnt < idx; ++cnt) {
+  secondShortestCode.clear();
+  fillWithZerosAndOnePadAndReverse(secondShortestCode, previousCode, secondShortestCodeOrigLen);
+
+  for (std::size_t cnt = 2; cnt < codes.size(); ++cnt) {
     auto &symbol = codes[cnt];
-    auto leftSecond = symbol.second.size();
-    auto rightSecond = (prevLeftCode + 1) * (1 << (leftSecond - prevLeftBit));
-    prevLeftBit = leftSecond;
-    prevLeftCode = rightSecond;
+    const auto codeLen = symbol.second.size();
+    const auto code = (previousCode + 1) * (1 << (codeLen - previousCodeLen));
+    previousCodeLen = codeLen;
+    previousCode = code;
     symbol.second.clear();
-    for (; rightSecond != 0; rightSecond >>= 1) { symbol.second.template emplace_back(rightSecond & 1); }
-    std::ranges::generate_n(std::back_inserter(symbol.second), leftSecond - symbol.second.size(), [] { return false; });
-    std::reverse(symbol.second.begin(), symbol.second.end());
+    fillWithZerosAndOnePadAndReverse(symbol.second, code, codeLen);
   }
 }
 
 /**
- * @details Model je concept kvuli optimalizacim - napriklad pro IdentityModel dojde k optimalizaci cele transformace
- * pryc a tim se usetri cas v runtime. Dynamickeho polymorfismu se da snadno dosahnout bez modifikace teto funkce.
- * @tparam Model
- * @param data
- * @param model
+ * Encode data using prepared symbol codes.
+ * @param data input data
+ * @param symbolCodes huffman codes for symbol
  * @return
  */
-template<std::integral T, typename Model = IdentityModel<T>>
-std::vector<uint8_t> encodeStatic(std::ranges::forward_range auto &&data, Model &&model = Model{}) {
-  spdlog::info("Starting static encoding");
-  std::ranges::transform(data, std::ranges::begin(data), model);
-  spdlog::trace("Applied model");
-  const auto histogram = createHistogram<uint8_t>(data);
-  spdlog::trace("Created histogram");
-  auto tree = buildTree<T>(histogram);
-  spdlog::info("Built tree");
-  auto symbolCodes = buildCodes(tree.getRoot());
-  transformCodes(symbolCodes);
-  spdlog::info("Created symbol codes");
-
+template<std::integral T>
+std::vector<uint8_t> encodeStatic_impl(std::ranges::forward_range auto &&data, const std::vector<std::pair<T, std::vector<bool>>> &symbolCodes) {
   const auto [minCodeLength, maxCodeLength] =
-      minmaxValue(symbolCodes | std::views::transform([](const auto &el) { return el.second.size(); })).value();
+  minmaxValue(symbolCodes | std::views::transform([](const auto &el) { return el.second.size(); })).value();
 
   auto byteHeader = std::vector<std::vector<uint8_t>>{};
   byteHeader.resize(maxCodeLength + 1);
@@ -182,25 +177,52 @@ std::vector<uint8_t> encodeStatic(std::ranges::forward_range auto &&data, Model 
   spdlog::info("Created header");
   spdlog::trace("Start binary encoding");
 
-  auto binEncoder = BinaryEncoder<uint8_t>{};
+  auto binEncoderData = BinaryEncoder<uint8_t>{};
 
-  const auto padding = binEncoder.unusedBitsInCell();
+  std::ranges::for_each(byteHeader.begin() + minCodeLength, byteHeader.end(), [&binEncoderData](const auto &v) {
+    const auto size = static_cast<uint8_t>(v.size());
+    binEncoderData.pushBack(size);
+  });
+  std::ranges::for_each(byteHeader, [&binEncoderData](auto val) { binEncoderData.pushBack(val); });
+  std::ranges::for_each(data,
+                        [&binEncoderData, &byteTable](const auto &in) { binEncoderData.pushBack(byteTable[in]); });
+
+  const auto padding = binEncoderData.unusedBitsInCell();
   const auto countThing = static_cast<uint8_t>(maxCodeLength + 1);
   const auto paddingThing = static_cast<uint8_t>((minCodeLength - 1) | (static_cast<uint8_t>(padding << 5)));
 
-  binEncoder.pushBack(countThing);
-  binEncoder.pushBack(paddingThing);
+  auto result = std::vector<uint8_t>{};
+  result.template emplace_back(countThing);
+  result.template emplace_back(paddingThing);
+  result.resize(result.size() + binEncoderData.data().size());
+  std::ranges::copy(binEncoderData.releaseData(), result.begin() + 2);
 
-  std::ranges::for_each(byteHeader.begin() + minCodeLength, byteHeader.end(), [&binEncoder](const auto &v) {
-    const auto size = static_cast<uint8_t>(v.size());
-    binEncoder.pushBack(size);
-  });
-  std::ranges::for_each(byteHeader, [&binEncoder](auto val) { binEncoder.pushBack(val); });
-  std::ranges::for_each(data, [&binEncoder, &byteTable](const auto &in) { binEncoder.pushBack(byteTable[in]); });
-
-  binEncoder.shrinkToFit();
-  spdlog::info("Data encoded, total length: {}[b]", binEncoder.size());
-  return binEncoder.releaseData();
+  spdlog::info("Data encoded, total length: {}[b]", result.size());
+  return result;
 }
+
+/**
+ * @details Model is a concept for the sake of optimisations
+ * @param data data to be encoded
+ * @param model
+ * @return encoded data
+ */
+template<std::integral T, typename Model = IdentityModel<T>>
+std::vector<uint8_t> encodeStatic(std::ranges::forward_range auto &&data, Model &&model = Model{}) {
+  spdlog::info("Starting static encoding");
+  std::ranges::transform(data, std::ranges::begin(data), makeApplyLambda<T>(model));
+  spdlog::trace("Applied model");
+  const auto histogram = createHistogram<uint8_t>(data);
+  spdlog::trace("Created histogram");
+  auto tree = buildTree<T>(histogram);
+  spdlog::info("Built tree");
+  auto symbolCodes = buildCodes(tree.getRoot());
+  spdlog::trace("Built codes");
+  transformCodes(symbolCodes);
+  spdlog::info("Created symbol codes");
+
+  return encodeStatic_impl(data, symbolCodes);
+}
+}// namespace pf::kko
 
 #endif//PF_HUFF_CODEC__COMPRESSION_H

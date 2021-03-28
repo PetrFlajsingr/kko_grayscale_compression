@@ -10,6 +10,7 @@
 #include <fstream>
 #include <vector>
 
+namespace pf::kko {
 /**
  * Pro cteni raw grayscale obrazku, pripadne postupnou iteraci bez nacteni vsech dat do pameti
  */
@@ -27,17 +28,17 @@ class RawGrayscaleImageDataReader {
   using sentinel = Sentinel;
   /**
    *
-   * @param src cesta ke zdrojovemu souboru
-   * @param imageWidth sirka obrazku
+   * @param src path to source file
+   * @param imageWidth
    */
-  explicit RawGrayscaleImageDataReader(const std::filesystem::path &src, int32_t imageWidth);
+  explicit RawGrayscaleImageDataReader(const std::filesystem::path &src, size_t imageWidth);
 
   /**
-   * @return cely soubor jako 1D pole bytu
+   * @return whole file as array of bytes
    */
   [[nodiscard]] std::vector<uint8_t> readAllRaw();
   /**
-   * @return cely soubor jako 2D pole bytu, kdy kazdy 'radek' ma delku width
+   * @return whole file as a 2D array, where each row is of 'imageWidth' length
    */
   [[nodiscard]] std::vector<std::vector<uint8_t>> readAll2D();
 
@@ -46,7 +47,7 @@ class RawGrayscaleImageDataReader {
 
  private:
   std::ifstream input;
-  int32_t width;
+  std::size_t width;
 };
 
 class RawGrayscaleImageDataReader::Iterator {
@@ -81,5 +82,6 @@ class RawGrayscaleImageDataReader::Sentinel {
 
 static_assert(std::input_iterator<RawGrayscaleImageDataReader::Iterator>);
 static_assert(std::sentinel_for<RawGrayscaleImageDataReader::Sentinel, RawGrayscaleImageDataReader::Iterator>);
+}// namespace pf::kko
 
 #endif//KKO_GRAYSCALE_COMPRESSION__RAWGRAYSCALEIMAGEDATAREADER_H

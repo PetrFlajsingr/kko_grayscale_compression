@@ -7,7 +7,6 @@ list(APPEND flags "-fconcepts" "-fconcepts-diagnostics-depth=10" "-fcoroutines" 
         "-Wpointer-arith" "-Wno-cast-qual" "-Wno-type-limits" "-Wno-strict-aliasing" "-g")
 
 
-
 if (CMAKE_BUILD_TYPE MATCHES Debug)
     message(" ")
     message("CMAKE IN DEBUG MODE")
@@ -48,8 +47,6 @@ set(SOURCES
         main.cpp
         args/ValidPathCheckAction.cpp
         RawGrayscaleImageDataReader.cpp
-        encoding.cpp
-        decoding.cpp
         )
 
 set(INCLUDES
@@ -62,9 +59,11 @@ set(INCLUDES
         )
 
 if (CMAKE_BUILD_TYPE MATCHES ASAN)
-    set(LASAN -lasan)
+    set(SAN_LIB -lasan)
+elseif (CMAKE_BUILD_TYPE MATCHES UBSAN)
+    set(SAN_LIB -lubsan)
 else ()
-    set(LASAN)
+    set(SAN_LIB)
 endif ()
 
 add_compile_definitions(FMT_HEADER_ONLY)
@@ -75,7 +74,7 @@ add_executable(test test.cpp)
 
 target_compile_options(huff_codec PRIVATE ${flags})
 target_compile_options(test PRIVATE ${flags})
-target_link_libraries(huff_codec ${LASAN})
+target_link_libraries(huff_codec ${SAN_LIB})
 
 if (MEASURE_BUILD_TIME)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")

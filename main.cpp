@@ -2,6 +2,7 @@
 #include "Tree.h"
 #include "argparse.hpp"
 #include "args/ValidPathCheckAction.h"
+#include "decoding.h"
 #include "encoding.h"
 #include "magic_enum.hpp"
 #include "spdlog/spdlog.h"
@@ -14,6 +15,15 @@
 #define ENABLE_LOG 1
 
 enum class AppMode { Compress, Decompress };
+
+struct AppSettings {
+  AppMode mode;
+  bool enableModel;
+  bool adaptiveScanning;
+  std::size_t imageWidth;
+  std::filesystem::path inputPath;
+  std::filesystem::path outputPath;
+};
 
 /**
  * Zpracovani vstupnich argumentu programu
@@ -31,7 +41,7 @@ std::optional<argparse::ArgumentParser> parseArgs(std::span<char *> args) {
   parser.add_argument("-w").help("Input image width").required().action([](const std::string &value) {
     const auto result = std::stoi(value);
     if (result < 1) { throw std::runtime_error(fmt::format("Invalid value for image width: '{}'", result)); }
-    return result;
+    return static_cast<std::size_t>(result);
   });
 
   try {
@@ -58,25 +68,47 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  const auto inputFilePath = args->get<std::filesystem::path>("-i");
-  const auto imageWidth = args->get<int>("-w");
-  const auto mode = args->get<bool>("-c") ? AppMode::Compress : AppMode::Decompress;
-  const auto useModel = args->get<bool>("-m");
-  spdlog::info("Input file: {}, image width: {}, mode: {}, using model: {}", inputFilePath.string(), imageWidth,
-               magic_enum::enum_name(mode), useModel);
+  const auto settings = AppSettings{.mode = args->get<bool>("-c") ? AppMode::Compress : AppMode::Decompress,
+                                    .enableModel = args->get<bool>("-m"),
+                                    .adaptiveScanning = args->get<bool>("-a"),
+                                    .imageWidth = args->get<std::size_t>("-w"),
+                                    .inputPath = args->get<std::filesystem::path>("-i"),
+                                    .outputPath = args->get<std::filesystem::path>("-o")};
 
-  auto data = RawGrayscaleImageDataReader{inputFilePath, imageWidth}.readAllRaw();
+  spdlog::info("Input file: {}, image width: {}, mode: {}, using model: {}", settings.inputPath.string(),
+               settings.imageWidth, magic_enum::enum_name(settings.mode), settings.enableModel);
+
+  auto data = pf::kko::RawGrayscaleImageDataReader{settings.inputPath, settings.imageWidth}.readAllRaw();
   spdlog::trace("Read data, total length: {}[B]", data.size());
 
-  if (mode == AppMode::Compress) {
-    auto encodedData = std::vector<uint8_t>{};
-    if (useModel) {
-      encodedData = encodeStatic<uint8_t>(std::move(data), NeighborDifferenceModel<uint8_t>{});
-    } else {
-      encodedData = encodeStatic<uint8_t>(std::move(data));
-    }
-    auto ostream = std::ofstream("/home/petr/CLionProjects/kko_grayscale_compression/output/test.compressed_mine", std::ios::binary);
-    ostream.write(reinterpret_cast<const char *>(encodedData.data()), encodedData.size());
+  auto outputStream = std::ofstream(settings.outputPath, std::ios::binary);
+
+  switch (settings.mode) {
+    case AppMode::Compress: {
+      auto encodedData = std::vector<uint8_t>{};
+      if (settings.enableModel) {
+        encodedData = pf::kko::encodeStatic<uint8_t>(std::move(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
+      } else {
+        encodedData = pf::kko::encodeStatic<uint8_t>(std::move(data));
+      }
+      outputStream.write(reinterpret_cast<const char *>(encodedData.data()), encodedData.size());
+    } break;
+    case AppMode::Decompress: {
+      auto decodedData = tl::expected<std::vector<uint8_t>, std::string>{};
+      if (settings.enableModel) {
+        decodedData = pf::kko::decodeStatic<uint8_t>(std::move(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
+      } else {
+        if (data.back() == uint8_t{0}) { data.pop_back(); }
+        decodedData = pf::kko::decodeStatic<uint8_t>(std::move(data));
+      }
+      if (decodedData.has_value()) {
+        outputStream.write(reinterpret_cast<const char *>(decodedData->data()), decodedData->size());
+      } else {
+        spdlog::error("Error while decoding: {}", decodedData.error());
+        fmt::print(stderr, "Error while decoding: {}", decodedData.error());
+      }
+    } break;
   }
+
   return 0;
 }

@@ -7,6 +7,11 @@
 
 #include <experimental/memory>
 
+namespace pf::kko {
+/**
+ * Binary tree node with parent pointer.
+ * @tparam T stored type
+ */
 template<typename T>
 class Node {
  public:
@@ -100,5 +105,6 @@ std::size_t countNodes(const Node<T> &node) {
   depthFirst(node, [&result](const auto &) { ++result; });
   return result;
 }
+}// namespace pf::kko
 
 #endif//HUFF_CODEC__TREE_H
