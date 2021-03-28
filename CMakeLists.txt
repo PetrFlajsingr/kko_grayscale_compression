@@ -45,8 +45,6 @@ endif ()
 
 set(SOURCES
         main.cpp
-        args/ValidPathCheckAction.cpp
-        RawGrayscaleImageDataReader.cpp
         )
 
 set(INCLUDES
@@ -71,9 +69,11 @@ include_directories(include)
 
 add_executable(huff_codec ${SOURCES})
 add_executable(test test.cpp)
+add_executable(bench bench.cpp)
 
 target_compile_options(huff_codec PRIVATE ${flags})
 target_compile_options(test PRIVATE ${flags})
+target_compile_options(bench PRIVATE ${flags})
 target_link_libraries(huff_codec ${SAN_LIB})
 
 if (MEASURE_BUILD_TIME)
