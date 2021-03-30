@@ -1,6 +1,7 @@
 #define FMT_HEADER_ONLY
 #include "RawGrayscaleImageDataReader.h"
 #include "Tree.h"
+#include "adaptive_encoding.h"
 #include "argparse.hpp"
 #include "args/ValidPathCheckAction.h"
 #include "fmt/core.h"
@@ -16,11 +17,12 @@
 #define ENABLE_LOG 1
 
 enum class AppMode { Compress, Decompress };
+enum class CompressionType { Static, Adaptive };
 
 struct AppSettings {
   AppMode mode;
   bool enableModel;
-  bool adaptiveScanning;
+  CompressionType compressionType;
   std::size_t imageWidth;
   std::filesystem::path inputPath;
   std::filesystem::path outputPath;
@@ -36,7 +38,7 @@ std::optional<argparse::ArgumentParser> parseArgs(std::span<char *> args) {
   parser.add_argument("-c").help("Compress input file").default_value(false).implicit_value(true);
   parser.add_argument("-d").help("Decompress input file").default_value(false).implicit_value(true);
   parser.add_argument("-m").help("Activate model for preprocessing").default_value(false).implicit_value(true);
-  parser.add_argument("-a").help("Adaptive scanning").default_value(false).implicit_value(true);
+  parser.add_argument("-a").help("Adaptive scanning").default_value(CompressionType::Static).implicit_value(CompressionType::Adaptive);
   parser.add_argument("-i").help("Path to input file").required().action(ValidPathCheckAction{PathType::File, true});
   parser.add_argument("-o").help("Path to output file").required().action(ValidPathCheckAction{PathType::File, false});
   parser.add_argument("-w").help("Input image width").required().action([](const std::string &value) {
@@ -71,7 +73,7 @@ int main(int argc, char **argv) {
 
   const auto settings = AppSettings{.mode = args->get<bool>("-c") ? AppMode::Compress : AppMode::Decompress,
                                     .enableModel = args->get<bool>("-m"),
-                                    .adaptiveScanning = args->get<bool>("-a"),
+                                    .compressionType = args->get<CompressionType>("-a"),
                                     .imageWidth = args->get<std::size_t>("-w"),
                                     .inputPath = args->get<std::filesystem::path>("-i"),
                                     .outputPath = args->get<std::filesystem::path>("-o")};
@@ -87,10 +89,23 @@ int main(int argc, char **argv) {
   switch (settings.mode) {
     case AppMode::Compress: {
       auto encodedData = std::vector<uint8_t>{};
-      if (settings.enableModel) {
-        encodedData = pf::kko::encodeStatic<uint8_t>(std::move(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
-      } else {
-        encodedData = pf::kko::encodeStatic<uint8_t>(std::move(data));
+      switch (settings.compressionType) {
+        case CompressionType::Static: {
+          if (settings.enableModel) {
+            encodedData = pf::kko::encodeStatic<uint8_t>(std::move(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
+          } else {
+            encodedData = pf::kko::encodeStatic<uint8_t>(std::move(data));
+          }
+          break;
+        }
+        case CompressionType::Adaptive: {
+          if (settings.enableModel) {
+            encodedData = pf::kko::encodeAdaptive<uint8_t>(std::move(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
+          } else {
+            encodedData = pf::kko::encodeAdaptive<uint8_t>(std::move(data));
+          }
+          break;
+        }
       }
       outputStream.write(reinterpret_cast<const char *>(encodedData.data()), encodedData.size());
     } break;

@@ -6,9 +6,20 @@
 #define HUFF_CODEC__UTILS_H
 
 #include <algorithm>
+#include <experimental/memory>
 #include <filesystem>
 #include <fstream>
 #include <ranges>
+
+namespace std {
+template<typename T>
+using observer_ptr = experimental::observer_ptr<T>;
+
+template<typename T>
+observer_ptr<T> make_observer(T *p) {
+  return experimental::make_observer(p);
+}
+}// namespace std
 
 namespace pf::kko {
 /**
@@ -69,6 +80,13 @@ std::vector<bool> typeToBits(const T &value) {
     const auto byte = rawDataPtr[i];
     for (int j = 7; j >= 0; --j) { result.template emplace_back(byte & (1 << j)); }
   }
+  return result;
+}
+
+template<typename T>
+std::vector<bool> typeToBits(const T &value, std::size_t bitLength) {
+  auto result = std::vector<bool>(bitLength - sizeof(T) * 8, false);
+  std::ranges::copy(typeToBits(value), std::back_inserter(result));
   return result;
 }
 

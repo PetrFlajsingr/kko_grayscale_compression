@@ -18,6 +18,7 @@
 #include <spdlog/spdlog.h>
 #include <vector>
 
+// TODO: EOF misto poctu b
 namespace pf::kko {
 
 template<std::integral T>
@@ -34,8 +35,8 @@ std::array<std::size_t, ValueCount<T>> createHistogram(const std::ranges::forwar
  * @return binary tree, where leaves represent symbols
  */
 template<std::integral T>
-Tree<EncodingTreeData<T>> buildTree(const std::ranges::forward_range auto &histogram) {
-  using NodeType = Node<EncodingTreeData<T>>;
+Tree<StaticEncodingTreeData<T>> buildTree(const std::ranges::forward_range auto &histogram) {
+  using NodeType = Node<StaticEncodingTreeData<T>>;
   // comparison function dereferencing ptrs
   const auto compare = [](const auto &lhs, const auto &rhs) { return *lhs > *rhs; };
 
@@ -45,26 +46,23 @@ Tree<EncodingTreeData<T>> buildTree(const std::ranges::forward_range auto &histo
   std::integral auto counter = T{};
   std::ranges::for_each(histogram, [&treeHeap, &counter, compare](const auto &occurrenceCnt) {
     if (occurrenceCnt > 0) {
-      pushAsHeap(treeHeap, std::make_unique<NodeType>(EncodingTreeData<T>{counter, occurrenceCnt, true}), compare);
+      pushAsHeap(treeHeap, makeUniqueNode(StaticEncodingTreeData<T>{counter, occurrenceCnt, true}), compare);
     }
     ++counter;
   });
   // if the tree only has one element, add special node
-  if (treeHeap.size() == 1) {
-    pushAsHeap(treeHeap, std::make_unique<NodeType>(EncodingTreeData<T>{0, 1, false}), compare);
-  }
+  if (treeHeap.size() == 1) { pushAsHeap(treeHeap, makeUniqueNode(makeNYTStatic<T>()), compare); }
   // heap transformation to a binary tree
   while (treeHeap.size() > 1) {
     auto left = popAsHeap(treeHeap, compare);
     auto right = popAsHeap(treeHeap, compare);
-    auto newNode =
-        std::make_unique<NodeType>(EncodingTreeData<T>{0, left->getValue().weight + right->getValue().weight, true});
+    auto newNode = makeUniqueNode(StaticEncodingTreeData<T>{0, left->getValue().weight + right->getValue().weight, true});
     newNode->setLeft(std::move(left));
     newNode->setRight(std::move(right));
     treeHeap.emplace_back(std::move(newNode));
     std::push_heap(treeHeap.begin(), treeHeap.end(), compare);
   }
-  auto result = Tree<EncodingTreeData<T>>();
+  auto result = Tree<StaticEncodingTreeData<T>>();
   result.setRoot(std::move(treeHeap.front()));
   return result;
 }
@@ -76,7 +74,7 @@ Tree<EncodingTreeData<T>> buildTree(const std::ranges::forward_range auto &histo
  * @param branchCode code from the previous levels of the tree
  */
 template<std::integral T>
-void buildCodes(Node<EncodingTreeData<T>> &node, std::vector<std::pair<T, std::vector<bool>>> &codesForSymbols,
+void buildCodes(Node<StaticEncodingTreeData<T>> &node, std::vector<std::pair<T, std::vector<bool>>> &codesForSymbols,
                 const std::vector<bool> &branchCode) {
   if (node.isLeaf()) {
     codesForSymbols.template emplace_back(node->value, branchCode);
@@ -96,7 +94,7 @@ void buildCodes(Node<EncodingTreeData<T>> &node, std::vector<std::pair<T, std::v
  * @return vector of pairs, where pair.first is a symbol and pair.second is binary code
  */
 template<std::integral T>
-std::vector<std::pair<T, std::vector<bool>>> buildCodes(Node<EncodingTreeData<T>> &node) {
+std::vector<std::pair<T, std::vector<bool>>> buildCodes(Node<StaticEncodingTreeData<T>> &node) {
   auto result = std::vector<std::pair<T, std::vector<bool>>>{};
   buildCodes(node, result, {});
   return result;

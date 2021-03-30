@@ -48,11 +48,15 @@ set(SOURCES
         )
 
 set(INCLUDES
-        main.cpp
         args/ValidPathCheckAction.h
         RawGrayscaleImageDataReader.h
         static_encoding.h
         static_decoding.h
+        constants.h
+        BinaryEncoder.h
+        EncodingTreeData.h
+        models.h
+        utils.h
         Tree.h
         )
 

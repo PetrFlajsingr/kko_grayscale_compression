@@ -1,5 +1,7 @@
 CXX=g++-10 #g++-10.2 for merlin
-CXXFLAGS= -std=c++20 -fconcepts -fconcepts-diagnostics-depth=10 -Werror=return-type -Wall -Wextra -Werror -Wpedantic -Wno-unknown-pragmas -Wno-unused-function -Wpointer-arith -Wno-cast-qual -Wno-type-limits -Wno-strict-aliasing -g -o3
+CXXFLAGS= -std=c++20 -fconcepts -fconcepts-diagnostics-depth=10 -Werror=return-type -Wall -Wextra -Werror\
+ -Wpedantic -Wno-unknown-pragmas -Wno-unused-function -Wpointer-arith -Wno-cast-qual -Wno-type-limits\
+ -Wno-strict-aliasing -o3 -static
 BIN_NAME=huff_codec
 LIBS_PATH=libs
 
