@@ -9,7 +9,8 @@
 #include <experimental/memory>
 #include <filesystem>
 #include <fstream>
-#include <ranges>
+#include <numeric>
+#include <cmath>
 
 namespace std {
 template<typename T>
@@ -135,6 +136,15 @@ void forEachBit_n(const T &value, std::size_t n, std::invocable<bool> auto fnc) 
 inline void writeToFile(const std::filesystem::path &path, const std::string &text) {
   auto ostream = std::ofstream(path);
   ostream << text;
+}
+
+template <std::integral T>
+T binToIntegral(const std::vector<bool> &bin) {
+  auto result = T{};
+  for (std::size_t i = 0; i < bin.size(); ++i) {
+    result += bin[i] ? std::pow(2, 8 - i) : 0;
+  }
+  return result;
 }
 }// namespace pf::kko
 

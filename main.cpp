@@ -1,6 +1,7 @@
 #define FMT_HEADER_ONLY
 #include "RawGrayscaleImageDataReader.h"
 #include "Tree.h"
+#include "adaptive_decoding.h"
 #include "adaptive_encoding.h"
 #include "argparse.hpp"
 #include "args/ValidPathCheckAction.h"
@@ -38,7 +39,10 @@ std::optional<argparse::ArgumentParser> parseArgs(std::span<char *> args) {
   parser.add_argument("-c").help("Compress input file").default_value(false).implicit_value(true);
   parser.add_argument("-d").help("Decompress input file").default_value(false).implicit_value(true);
   parser.add_argument("-m").help("Activate model for preprocessing").default_value(false).implicit_value(true);
-  parser.add_argument("-a").help("Adaptive scanning").default_value(CompressionType::Static).implicit_value(CompressionType::Adaptive);
+  parser.add_argument("-a")
+      .help("Adaptive scanning")
+      .default_value(CompressionType::Static)
+      .implicit_value(CompressionType::Adaptive);
   parser.add_argument("-i").help("Path to input file").required().action(ValidPathCheckAction{PathType::File, true});
   parser.add_argument("-o").help("Path to output file").required().action(ValidPathCheckAction{PathType::File, false});
   parser.add_argument("-w").help("Input image width").required().action([](const std::string &value) {
@@ -55,6 +59,55 @@ std::optional<argparse::ArgumentParser> parseArgs(std::span<char *> args) {
     return std::nullopt;
   }
   return parser;
+}
+
+std::function<std::vector<uint8_t>(std::vector<uint8_t> &&)> getEncodeFnc(const AppSettings &settings) {
+  switch (settings.compressionType) {
+    case CompressionType::Static: {
+      if (settings.enableModel) {
+        return [](auto &&data) {
+          return pf::kko::encodeStatic<uint8_t>(std::move(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
+        };
+      } else {
+        return [](auto &&data) { return pf::kko::encodeStatic<uint8_t>(std::move(data)); };
+      }
+    }
+    case CompressionType::Adaptive: {
+      if (settings.enableModel) {
+        return [](auto &&data) {
+          return pf::kko::encodeAdaptive<uint8_t>(std::move(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
+        };
+      } else {
+        return [](auto &&data) { return pf::kko::encodeAdaptive<uint8_t>(std::move(data)); };
+      }
+    }
+  }
+  throw "Only 'cause -Werror=return-type doesn't recognize, that this function always returns through switch";
+}
+
+std::function<tl::expected<std::vector<uint8_t>, std::string>(std::vector<uint8_t> &&)>
+getDecodeFnc(const AppSettings &settings) {
+  switch (settings.compressionType) {
+    case CompressionType::Static: {
+      if (settings.enableModel) {
+        return [](auto &&data) {
+          return pf::kko::decodeStatic<uint8_t>(std::move(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
+        };
+      } else {
+        return [](auto &&data) { return pf::kko::decodeStatic<uint8_t>(std::move(data)); };
+      }
+    }
+    case CompressionType::Adaptive: {
+      if (settings.enableModel) {
+        return [](auto &&data) {
+          return pf::kko::decodeAdaptive<uint8_t>(std::move(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
+        };
+      } else {
+        return [](auto &&data) { return pf::kko::decodeAdaptive<uint8_t>(std::move(data)); };
+      }
+    }
+  }
+  throw "Only 'cause -Werror=return-type doesn't recognize, that this function always returns through switch";
 }
 
 int main(int argc, char **argv) {
@@ -88,35 +141,11 @@ int main(int argc, char **argv) {
 
   switch (settings.mode) {
     case AppMode::Compress: {
-      auto encodedData = std::vector<uint8_t>{};
-      switch (settings.compressionType) {
-        case CompressionType::Static: {
-          if (settings.enableModel) {
-            encodedData = pf::kko::encodeStatic<uint8_t>(std::move(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
-          } else {
-            encodedData = pf::kko::encodeStatic<uint8_t>(std::move(data));
-          }
-          break;
-        }
-        case CompressionType::Adaptive: {
-          if (settings.enableModel) {
-            encodedData = pf::kko::encodeAdaptive<uint8_t>(std::move(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
-          } else {
-            encodedData = pf::kko::encodeAdaptive<uint8_t>(std::move(data));
-          }
-          break;
-        }
-      }
+      const auto encodedData = getEncodeFnc(settings)(std::move(data));
       outputStream.write(reinterpret_cast<const char *>(encodedData.data()), encodedData.size());
     } break;
     case AppMode::Decompress: {
-      auto decodedData = tl::expected<std::vector<uint8_t>, std::string>{};
-      if (settings.enableModel) {
-        decodedData = pf::kko::decodeStatic<uint8_t>(std::move(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
-      } else {
-        if (data.back() == uint8_t{0}) { data.pop_back(); }
-        decodedData = pf::kko::decodeStatic<uint8_t>(std::move(data));
-      }
+      const auto decodedData = getDecodeFnc(settings)(std::move(data));
       if (decodedData.has_value()) {
         outputStream.write(reinterpret_cast<const char *>(decodedData->data()), decodedData->size());
       } else {
