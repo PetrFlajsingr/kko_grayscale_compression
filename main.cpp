@@ -1,3 +1,10 @@
+/**
+ * @name main.cpp
+ * @brief main file of the program
+ * @author Petr Flajšingr, xflajs00
+ * @date 23.03.2021
+ */
+
 #define FMT_HEADER_ONLY
 #include "RawGrayscaleImageDataReader.h"
 #include "Tree.h"

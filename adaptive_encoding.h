@@ -1,7 +1,9 @@
-//
-// Created by petr on 3/28/21.
-//
-
+/**
+ * @name adaptive_encoding.h
+ * @brief functions for adaptive huffman encoding
+ * @author Petr Flajšingr, xflajs00
+ * @date 30.03.2021
+ */
 #ifndef HUFF_CODEC__ADAPTIVE_ENCODING_H
 #define HUFF_CODEC__ADAPTIVE_ENCODING_H
 
@@ -52,6 +54,12 @@ std::vector<bool> getPathToSymbol(detail::NodeType<T> &root, detail::NodeType<T>
   return result;
 }
 
+/**
+ * Vitter algorithm implementation of adaptive huffman encoding.
+ * @param data data to be encoded
+ * @param model
+ * @return encoded data using adaptive huffman encoding
+ */
 template<std::integral T, typename Model = IdentityModel<T>>
 std::vector<uint8_t> encodeAdaptive(std::ranges::forward_range auto &&data, Model &&model = Model{}) {
   std::ranges::transform(data, std::ranges::begin(data), makeApplyLambda<T>(model));

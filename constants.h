@@ -1,7 +1,9 @@
-//
-// Created by petr on 3/28/21.
-//
-
+/**
+ * @name constants.h
+ * @brief global space for constants
+ * @author Petr Flajšingr, xflajs00
+ * @date 28.03.2021
+ */
 #ifndef HUFF_CODEC__CONSTANTS_H
 #define HUFF_CODEC__CONSTANTS_H
 

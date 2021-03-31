@@ -12,9 +12,7 @@
 #include <vector>
 
 namespace pf::kko {
-/**
- * Pro cteni raw grayscale obrazku, pripadne postupnou iteraci bez nacteni vsech dat do pameti
- */
+
 class RawGrayscaleImageDataReader {
  public:
   class Sentinel {

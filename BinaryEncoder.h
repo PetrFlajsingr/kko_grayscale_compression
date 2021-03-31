@@ -1,7 +1,9 @@
-//
-// Created by petr on 3/26/21.
-//
-
+/**
+ * @name BinaryEncoding.h
+ * @brief class for writing binary data to memory - simplified serialisation etc.
+ * @author Petr Flajšingr, xflajs00
+ * @date 26.03.2021
+ */
 #ifndef HUFF_CODEC__BINARYENCODER_H
 #define HUFF_CODEC__BINARYENCODER_H
 

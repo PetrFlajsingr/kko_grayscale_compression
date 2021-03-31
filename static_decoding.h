@@ -1,6 +1,9 @@
-//
-// Created by petr on 3/23/21.
-//
+/**
+ * @name static_encoding.h
+ * @brief functions for static huffman decoding
+ * @author Petr Flajšingr, xflajs00
+ * @date 23.03.2021
+ */
 
 #ifndef PF_HUFF_CODEC__DECOMPRESSION_H
 #define PF_HUFF_CODEC__DECOMPRESSION_H

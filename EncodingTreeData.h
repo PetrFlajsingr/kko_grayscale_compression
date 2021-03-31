@@ -1,6 +1,9 @@
-//
-// Created by petr on 3/28/21.
-//
+/**
+ * @name EncodingTreeData.h
+ * @brief structures used in nodes of trees while encoding/decoding
+ * @author Petr Flajšingr, xflajs00
+ * @date 28.03.2021
+ */
 
 #ifndef HUFF_CODEC__ENCODINGTREEDATA_H
 #define HUFF_CODEC__ENCODINGTREEDATA_H
@@ -42,7 +45,7 @@ StaticEncodingTreeData<T> makeNYTStatic() {
   return StaticEncodingTreeData<T>{T{}, 0, true};
 }
 template <std::integral T>
-AdaptiveEncodingTreeData<T> makeNYTAdaptive(std::size_t order = 512/*std::numeric_limits<std::size_t>::max()*/) {
+AdaptiveEncodingTreeData<T> makeNYTAdaptive(std::size_t order = 512) {
   return AdaptiveEncodingTreeData<T>{T{}, 0, true, order};
 }
 

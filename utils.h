@@ -1,6 +1,9 @@
-//
-// Created by petr on 3/23/21.
-//
+/**
+ * @name utils.h
+ * @brief utility functions of various kind - minmax, heap, bit manipulation...
+ * @author Petr Flajšingr, xflajs00
+ * @date 23.03.2021
+ */
 
 #ifndef HUFF_CODEC__UTILS_H
 #define HUFF_CODEC__UTILS_H

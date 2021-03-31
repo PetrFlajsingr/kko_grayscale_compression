@@ -1,6 +1,9 @@
-//
-// Created by petr on 3/31/21.
-//
+/**
+ * @name adaptive_decoding.h
+ * @brief functions for adaptive huffman decoding
+ * @author Petr Flajšingr, xflajs00
+ * @date 31.03.2021
+ */
 
 #ifndef HUFF_CODEC__ADAPTIVE_DECODING_H
 #define HUFF_CODEC__ADAPTIVE_DECODING_H

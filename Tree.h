@@ -1,6 +1,9 @@
-//
-// Created by petr on 3/23/21.
-//
+/**
+ * @name Tree.h
+ * @brief generic binary tree structure with utility functions
+ * @author Petr Flajšingr, xflajs00
+ * @date 23.03.2021
+ */
 
 #ifndef HUFF_CODEC__TREE_H
 #define HUFF_CODEC__TREE_H

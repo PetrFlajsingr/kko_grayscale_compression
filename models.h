@@ -1,6 +1,9 @@
-//
-// Created by petr on 3/27/21.
-//
+/**
+ * @name models.h
+ * @brief concepts and models for data transformation while encoding/decoding
+ * @author Petr Flajšingr, xflajs00
+ * @date 27.03.2021
+ */
 
 #ifndef HUFF_CODEC__MODELS_H
 #define HUFF_CODEC__MODELS_H
