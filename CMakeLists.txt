@@ -78,6 +78,7 @@ target_compile_options(huff_codec PRIVATE ${flags})
 target_compile_options(test PRIVATE ${flags})
 target_compile_options(bench PRIVATE ${flags})
 target_link_libraries(huff_codec ${SAN_LIB})
+target_link_libraries(test ${SAN_LIB})
 
 if (MEASURE_BUILD_TIME)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")

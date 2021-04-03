@@ -41,14 +41,10 @@ std::vector<bool> getPathToSymbol(detail::NodeType<T> &root, detail::NodeType<T>
   if (&root == &targetNode) { return {}; }
   auto result = std::vector<bool>{};
   if (root.hasLeft()) {
-    if (detail::getPathToSymbolImpl(root.getLeft(), targetNode, result)) {
-      result.emplace_back(false);
-    }
+    if (detail::getPathToSymbolImpl(root.getLeft(), targetNode, result)) { result.emplace_back(false); }
   }
   if (result.empty() && root.hasRight()) {
-    if (detail::getPathToSymbolImpl(root.getRight(), targetNode, result)) {
-      result.emplace_back(true);
-    };
+    if (detail::getPathToSymbolImpl(root.getRight(), targetNode, result)) { result.emplace_back(true); };
   }
   std::reverse(result.begin(), result.end());
   return result;
@@ -60,8 +56,8 @@ std::vector<bool> getPathToSymbol(detail::NodeType<T> &root, detail::NodeType<T>
  * @param model
  * @return encoded data using adaptive huffman encoding
  */
-template<std::integral T, typename Model = IdentityModel<T>>
-std::vector<uint8_t> encodeAdaptive(std::ranges::forward_range auto &&data, Model &&model = Model{}) {
+template<std::integral T>
+std::vector<uint8_t> encodeAdaptive(std::ranges::forward_range auto &&data, Model<T> auto &&model) {
   std::ranges::transform(data, std::ranges::begin(data), makeApplyLambda<T>(model));
   // speedup for leaf node lookup - no need to traverse the tree
   auto symbolNodes = detail::NodeCacheArray<T>{nullptr};
@@ -70,6 +66,7 @@ std::vector<uint8_t> encodeAdaptive(std::ranges::forward_range auto &&data, Mode
 
   tree.setRoot(makeUniqueNode(makeNYTAdaptive<T>()));
   auto nytNode = std::make_observer(&tree.getRoot());
+  spdlog::trace("Tree initialised");
 
   auto binEncoder = BinaryEncoder<uint8_t>{};
 
@@ -87,6 +84,7 @@ std::vector<uint8_t> encodeAdaptive(std::ranges::forward_range auto &&data, Mode
   // adding PSEUDO_EOF
   const auto eofCode = getPathToSymbol<T>(tree.getRoot(), *nytNode);
   binEncoder.pushBack(eofCode);
+  spdlog::info("Done, output data size: %[b]", binEncoder.size());
 
   return binEncoder.releaseData();
 }

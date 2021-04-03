@@ -15,9 +15,9 @@
 #include <tl/expected.hpp>
 
 namespace pf::kko {
-template<std::integral T, typename Model = IdentityModel<T>>
+template<std::integral T>
 tl::expected<std::vector<T>, std::string> decodeAdaptive(std::ranges::forward_range auto &&data,
-                                                         Model &&model = IdentityModel<T>()) {
+                                                         Model<T> auto &&model) {
   enum class State { Tree, Value };
   auto tree = detail::TreeType<T>{};
   tree.setRoot(makeUniqueNode(makeNYTAdaptive<T>()));
@@ -73,7 +73,6 @@ tl::expected<std::vector<T>, std::string> decodeAdaptive(std::ranges::forward_ra
       }
     });
   });
-  [[maybe_unused]] auto a = std::string(result.begin(), result.end());
 
   std::ranges::transform(result, std::ranges::begin(result), makeRevertLambda<T>(model));
   return result;

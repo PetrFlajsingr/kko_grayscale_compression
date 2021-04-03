@@ -141,13 +141,11 @@ class BinaryEncoder {
    * @tparam U
    * @param value value to be converted
    */
-  template<typename U>
-  void pushBack(const U &value) {
-    if constexpr (std::ranges::range<U>) {
-      std::ranges::for_each(value, [this](auto el) { pushBack(typeToBits(el)); });
-    } else {
-      pushBack(typeToBits(value));
-    }
+
+
+  template <typename ...Args>
+  void pushBack(const Args &...values) {
+    (pushBack_impl(values), ...);
   }
 
   /**
@@ -180,6 +178,15 @@ class BinaryEncoder {
   [[nodiscard]] std::vector<T> releaseData() { return std::move(rawData); }
 
  private:
+  template<typename U>
+  void pushBack_impl(const U &value) {
+    if constexpr (std::ranges::range<U>) {
+      std::ranges::for_each(value, [this](auto el) { pushBack(typeToBits(el)); });
+    } else {
+      pushBack(typeToBits(value));
+    }
+  }
+
   [[nodiscard]] constexpr size_type sizeForBits(size_type bits) const {
     const auto div = bits / TYPE_BIT_SIZE;
     const auto mod = bits % TYPE_BIT_SIZE;

@@ -25,9 +25,8 @@ namespace pf::kko {
  * @param data input data
  * @return unexpected when error occurs, otherwise decoded data
  */
-template<std::integral T, typename Model = IdentityModel<T>>
-tl::expected<std::vector<T>, std::string> decodeStatic(std::ranges::forward_range auto &&data,
-                                                       Model &&model = IdentityModel<T>()) {
+template<std::integral T>
+tl::expected<std::vector<T>, std::string> decodeStatic(std::ranges::forward_range auto &&data, Model<T> auto &&model) {
   auto iter = std::ranges::begin(data);
   const auto dataSize = std::ranges::size(data);
 

@@ -8,6 +8,8 @@
 #define FMT_HEADER_ONLY
 #include "RawGrayscaleImageDataReader.h"
 #include "Tree.h"
+#include "adaptive_blocks_decoding.h"
+#include "adaptive_blocks_encoding.h"
 #include "adaptive_decoding.h"
 #include "adaptive_encoding.h"
 #include "argparse.hpp"
@@ -30,6 +32,7 @@ enum class CompressionType { Static, Adaptive };
 struct AppSettings {
   AppMode mode;
   bool enableModel;
+  bool enableStatic;
   CompressionType compressionType;
   std::size_t imageWidth;
   std::filesystem::path inputPath;
@@ -52,6 +55,7 @@ std::optional<argparse::ArgumentParser> parseArgs(std::span<char *> args) {
       .implicit_value(CompressionType::Adaptive);
   parser.add_argument("-i").help("Path to input file").required().action(ValidPathCheckAction{PathType::File, true});
   parser.add_argument("-o").help("Path to output file").required().action(ValidPathCheckAction{PathType::File, false});
+  parser.add_argument("--static").help("Static huffman").default_value(false).implicit_value(true);
   parser.add_argument("-w").help("Input image width").required().action([](const std::string &value) {
     const auto result = std::stoi(value);
     if (result < 1) { throw std::runtime_error(fmt::format("Invalid value for image width: '{}'", result)); }
@@ -69,23 +73,41 @@ std::optional<argparse::ArgumentParser> parseArgs(std::span<char *> args) {
 }
 
 std::function<std::vector<uint8_t>(std::vector<uint8_t> &&)> getEncodeFnc(const AppSettings &settings) {
+  if (settings.enableStatic) {
+    if (settings.enableModel) {
+      return [](auto &&data) {
+        return pf::kko::encodeStatic<uint8_t>(std::move(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
+      };
+    } else {
+      return [](auto &&data) {
+        return pf::kko::encodeStatic<uint8_t>(std::move(data), pf::kko::IdentityModel<uint8_t>{});
+      };
+    }
+  }
   switch (settings.compressionType) {
     case CompressionType::Static: {
-      if (settings.enableModel) {
-        return [](auto &&data) {
-          return pf::kko::encodeStatic<uint8_t>(std::move(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
-        };
-      } else {
-        return [](auto &&data) { return pf::kko::encodeStatic<uint8_t>(std::move(data)); };
-      }
-    }
-    case CompressionType::Adaptive: {
       if (settings.enableModel) {
         return [](auto &&data) {
           return pf::kko::encodeAdaptive<uint8_t>(std::move(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
         };
       } else {
-        return [](auto &&data) { return pf::kko::encodeAdaptive<uint8_t>(std::move(data)); };
+        return [](auto &&data) {
+          return pf::kko::encodeAdaptive<uint8_t>(std::move(data), pf::kko::IdentityModel<uint8_t>{});
+        };
+      }
+    }
+    case CompressionType::Adaptive: {
+      const auto imgWidth = settings.imageWidth;
+      if (settings.enableModel) {
+        return [imgWidth](auto &&data) {
+          return pf::kko::encodeImageAdaptiveBlocks<uint8_t>(std::move(data), imgWidth,
+                                                             pf::kko::NeighborDifferenceModel<uint8_t>{});
+        };
+      } else {
+        return [imgWidth](auto &&data) {
+          return pf::kko::encodeImageAdaptiveBlocks<uint8_t>(std::move(data), imgWidth,
+                                                             pf::kko::IdentityModel<uint8_t>{});
+        };
       }
     }
   }
@@ -94,23 +116,39 @@ std::function<std::vector<uint8_t>(std::vector<uint8_t> &&)> getEncodeFnc(const 
 
 std::function<tl::expected<std::vector<uint8_t>, std::string>(std::vector<uint8_t> &&)>
 getDecodeFnc(const AppSettings &settings) {
+  if (settings.enableStatic) {
+    if (settings.enableModel) {
+      return [](auto &&data) {
+        return pf::kko::decodeStatic<uint8_t>(std::move(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
+      };
+    } else {
+      return [](auto &&data) {
+        return pf::kko::decodeStatic<uint8_t>(std::move(data), pf::kko::IdentityModel<uint8_t>{});
+      };
+    }
+  }
   switch (settings.compressionType) {
     case CompressionType::Static: {
-      if (settings.enableModel) {
-        return [](auto &&data) {
-          return pf::kko::decodeStatic<uint8_t>(std::move(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
-        };
-      } else {
-        return [](auto &&data) { return pf::kko::decodeStatic<uint8_t>(std::move(data)); };
-      }
-    }
-    case CompressionType::Adaptive: {
       if (settings.enableModel) {
         return [](auto &&data) {
           return pf::kko::decodeAdaptive<uint8_t>(std::move(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
         };
       } else {
-        return [](auto &&data) { return pf::kko::decodeAdaptive<uint8_t>(std::move(data)); };
+        return [](auto &&data) {
+          return pf::kko::decodeAdaptive<uint8_t>(std::move(data), pf::kko::IdentityModel<uint8_t>{});
+        };
+      }
+    }
+    case CompressionType::Adaptive: {
+      if (settings.enableModel) {
+        return [](auto &&data) {
+          return pf::kko::decodeImageAdaptiveBlocks<uint8_t>(std::move(data),
+                                                             pf::kko::NeighborDifferenceModel<uint8_t>{});
+        };
+      } else {
+        return [](auto &&data) {
+          return pf::kko::decodeImageAdaptiveBlocks<uint8_t>(std::move(data), pf::kko::IdentityModel<uint8_t>{});
+        };
       }
     }
   }
@@ -133,6 +171,7 @@ int main(int argc, char **argv) {
 
   const auto settings = AppSettings{.mode = args->get<bool>("-c") ? AppMode::Compress : AppMode::Decompress,
                                     .enableModel = args->get<bool>("-m"),
+                                    .enableStatic = args->get<bool>("--static"),
                                     .compressionType = args->get<CompressionType>("-a"),
                                     .imageWidth = args->get<std::size_t>("-w"),
                                     .inputPath = args->get<std::filesystem::path>("-i"),

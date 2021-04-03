@@ -9,6 +9,7 @@
 #define HUFF_CODEC__ADAPTIVE_COMMON_H
 
 #include "EncodingTreeData.h"
+#include "Tree.h"
 namespace pf::kko {
 
 namespace detail {

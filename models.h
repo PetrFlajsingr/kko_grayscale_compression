@@ -18,7 +18,7 @@ concept Model = requires(T model, ValueType value) {
   ->std::same_as<ValueType>;
   { model.revert(value) }
   ->std::same_as<ValueType>;
-};
+} && std::copy_constructible<T>;
 
 template<typename T>
 struct IdentityModel {
