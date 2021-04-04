@@ -6,7 +6,6 @@ list(APPEND flags "-fconcepts" "-fconcepts-diagnostics-depth=10" "-fcoroutines" 
         "-Wall" "-Wextra" "-Werror" "-Wpedantic" "-Wno-unknown-pragmas" "-Wno-unused-function"
         "-Wpointer-arith" "-Wno-cast-qual" "-Wno-type-limits" "-Wno-strict-aliasing" "-g")
 
-
 if (CMAKE_BUILD_TYPE MATCHES Debug)
     message(" ")
     message("CMAKE IN DEBUG MODE")
@@ -15,7 +14,7 @@ elseif (CMAKE_BUILD_TYPE MATCHES Release)
     message(" ")
     message("CMAKE IN RELEASE MODE")
     message(" ")
-    list(APPEND flags "-o3")
+    list(APPEND flags "-O3")
 elseif (CMAKE_BUILD_TYPE MATCHES ASAN)
     message(" ")
     message("CMAKE IN ADDRESS SANITISE MODE")

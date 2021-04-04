@@ -1,6 +1,7 @@
 //
 // Created by petr on 3/26/21.
 //
+#define FMT_HEADER_ONLY
 #include "adaptive_blocks_decoding.h"
 #include "adaptive_blocks_encoding.h"
 #include "BinaryEncoder.h"

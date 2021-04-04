@@ -10,6 +10,7 @@
 
 #include "AdaptiveImageScanner.h"
 #include "adaptive_common.h"
+#include <fmt/core.h>
 #include <tl/expected.hpp>
 #include <utility>
 #include <vector>
@@ -115,7 +116,7 @@ struct DecodeContext {
  */
 template<std::integral T>
 tl::expected<std::vector<T>, std::string> decodeImageAdaptiveBlocks(std::ranges::forward_range auto &&data,
-                                                                    [[maybe_unused]] Model<T> auto &&model) {
+                                                                    Model<T> auto &&model) {
   auto tree = detail::TreeType<T>{};
   tree.setRoot(makeUniqueNode(makeNYTAdaptive<T>()));
 
@@ -123,6 +124,12 @@ tl::expected<std::vector<T>, std::string> decodeImageAdaptiveBlocks(std::ranges:
 
   auto node = std::make_observer(&tree.getRoot());
   auto nytNode = node;
+  [[maybe_unused]] const auto resetTree = [&] {
+    std::ranges::fill(symbolNodes, nullptr);
+    tree.setRoot(makeUniqueNode(makeNYTAdaptive<T>()));
+    node = std::make_observer(&tree.getRoot());
+    nytNode = node;
+  };
 
   auto result = std::vector<T>{};
   auto resultView = View2D<std::vector<T>, false>{};
@@ -145,6 +152,7 @@ tl::expected<std::vector<T>, std::string> decodeImageAdaptiveBlocks(std::ranges:
         return;
       default: break;
     }
+
     if (done) { return; }
     forEachBit(byte, [&](bool bit) {
       if (done) { return; }
@@ -152,15 +160,17 @@ tl::expected<std::vector<T>, std::string> decodeImageAdaptiveBlocks(std::ranges:
         case DecodeState::ImageHeader: throw std::runtime_error("Invalid state");
         case DecodeState::BlockHeader:
           ++ctx.blockHeader.bitsRead;
-          ctx.scanMethodBuffer |= ((bit ? 1 : 0) << (4 - ctx.blockHeader.bitsRead));
-          if (ctx.blockHeader.bitsRead == 4) {
-            if (ctx.scanMethodBuffer == 0b1111) {
+          ctx.scanMethodBuffer |= ((bit ? 1 : 0) << (3 - ctx.blockHeader.bitsRead));
+          if (ctx.blockHeader.bitsRead == 3) {
+            if (ctx.scanMethodBuffer == 0b111) {
               done = true;
               return;
             }
             ctx.blockHeader.scanMethod = static_cast<ScanMethod>(ctx.scanMethodBuffer);
             ctx.blockScanData.reset(ctx.blockHeader.scanMethod);
             ctx.state = ctx.isFirstBlock ? DecodeState::Value : DecodeState::Tree;
+            //ctx.state = DecodeState::Value;
+            //resetTree();
             ctx.isFirstBlock = false;
             ctx.currentlyUsedModel = model;
             ctx.blockHeader.bitsRead = 0;

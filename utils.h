@@ -89,8 +89,13 @@ std::vector<bool> typeToBits(const T &value) {
 
 template<typename T>
 std::vector<bool> typeToBits(const T &value, std::size_t bitLength) {
-  auto result = std::vector<bool>(bitLength - sizeof(T) * 8, false);
-  std::ranges::copy(typeToBits(value), std::back_inserter(result));
+  const auto padding = bitLength >= sizeof(T) * 8 ? bitLength - sizeof(T) * 8 : 0;
+  auto result = std::vector<bool>(padding, false);
+  if (bitLength < sizeof(T) * 8) {
+    std::ranges::copy_n(typeToBits(value).begin() + (sizeof(T) * 8 - bitLength), bitLength, std::back_inserter(result));
+  } else {
+    std::ranges::copy(typeToBits(value), std::back_inserter(result));
+  }
   return result;
 }
 
@@ -148,6 +153,10 @@ T binToIntegral(const std::vector<bool> &bin) {
     result += bin[i] ? std::pow(2, 8 - i) : 0;
   }
   return result;
+}
+
+auto countBitsPerCharacter(std::integral auto origSize, std::integral auto newSize) {
+  return newSize / static_cast<double>(origSize) * 8;
 }
 }// namespace pf::kko
 

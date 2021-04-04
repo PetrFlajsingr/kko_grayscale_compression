@@ -22,7 +22,7 @@ namespace pf::kko {
 /**
  * Model is reset for each block
  * header: 16 bit width, 16 bit height, 8 bit block width, 8 bit block height
- * block header: 4 bit scan method - 0b1111 is end
+ * block header: 3 bit scan method - 0b111 is end
  * adaptive hamming code(AHC) -> block header(BH) -> AHC -> BH... -> BH 0b1111
  * blocks are padded with zeros
  * @param data data to be encoded
@@ -42,6 +42,13 @@ std::vector<uint8_t> encodeImageAdaptiveBlocks(std::ranges::forward_range auto &
 
   tree.setRoot(makeUniqueNode(makeNYTAdaptive<T>()));
   auto nytNode = std::make_observer(&tree.getRoot());
+
+  [[maybe_unused]] const auto resetTree = [&] {
+    std::ranges::fill(symbolNodes, nullptr);
+    tree.setRoot(makeUniqueNode(makeNYTAdaptive<T>()));
+    nytNode = std::make_observer(&tree.getRoot());
+  };
+
   spdlog::trace("Tree initialised");
 
   auto binEncoder = BinaryEncoder<uint8_t>{};
@@ -56,8 +63,8 @@ std::vector<uint8_t> encodeImageAdaptiveBlocks(std::ranges::forward_range auto &
 
   for (auto &block : scanner) {
     // save block info (scan method type)
-    binEncoder.pushBack(typeToBits(block.getScanMethod(), 4));
-
+    binEncoder.pushBack(typeToBits(block.getScanMethod(), 3));
+    //resetTree();
     for (auto symbol : block) {
       auto code = std::vector<bool>{};
       if (symbolNodes[symbol] != nullptr) {
@@ -70,8 +77,8 @@ std::vector<uint8_t> encodeImageAdaptiveBlocks(std::ranges::forward_range auto &
       nytNode = updateTree(tree, symbol, nytNode, symbolNodes);
     }
   }
-  binEncoder.pushBack(typeToBits(uint8_t{0b1111}, 4));
-  spdlog::info("Done, output data size: %[b]", binEncoder.size());
+  binEncoder.pushBack(typeToBits(uint8_t{0b111}, 3));
+  spdlog::info("Done, output data size: {}[b]", binEncoder.size());
 
   return binEncoder.releaseData();
 }

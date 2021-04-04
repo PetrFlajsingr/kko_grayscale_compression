@@ -21,7 +21,6 @@
 #include <spdlog/spdlog.h>
 #include <vector>
 
-// TODO: EOF misto poctu b
 namespace pf::kko {
 
 template<std::integral T>

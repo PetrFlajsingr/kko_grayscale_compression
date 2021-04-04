@@ -84,7 +84,7 @@ std::vector<uint8_t> encodeAdaptive(std::ranges::forward_range auto &&data, Mode
   // adding PSEUDO_EOF
   const auto eofCode = getPathToSymbol<T>(tree.getRoot(), *nytNode);
   binEncoder.pushBack(eofCode);
-  spdlog::info("Done, output data size: %[b]", binEncoder.size());
+  spdlog::info("Done, output data size: {}[b]", binEncoder.size());
 
   return binEncoder.releaseData();
 }
