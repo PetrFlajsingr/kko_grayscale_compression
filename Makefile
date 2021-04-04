@@ -28,4 +28,4 @@ clean:
 	rm -f *.o $(BIN_NAME) $(BENCH_BIN_NAME)
 
 zip:
-	zip -r kko_xflajs00.zip *.cpp *.h Makefile $(LIBS_PATH)/* args/*
+	zip -r kko_xflajs00.zip *.cpp *.h Makefile $(LIBS_PATH)/* args/* *.html *.pdf

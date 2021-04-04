@@ -110,7 +110,7 @@ getDecodeFnc(bool enableStatic, bool enableModel, bool adaptive) {
 }
 
 std::optional<argparse::ArgumentParser> parseArgs(std::span<char *> args) {
-  auto parser = argparse::ArgumentParser("huff_codec_bench");
+  auto parser = argparse::ArgumentParser("bench");
   parser.add_argument("-i")
       .help("Path to folder with input files")
       .required()
