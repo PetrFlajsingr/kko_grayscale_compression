@@ -35,7 +35,7 @@ std::vector<uint8_t> encodeImageAdaptiveBlocks(std::ranges::forward_range auto &
                                                Model<T> auto &&model) {
   auto view = makeView2D<true>(data, imageWidth);
 
-  auto scanner = AdaptiveImageScanner(view, {8, 8}, SameNeighborsScorer{}, std::forward<decltype(model)>(model));
+  auto scanner = AdaptiveImageScanner(view, {8, 8}, NeighborDifferenceScorer{}, std::forward<decltype(model)>(model));
 
   auto symbolNodes = detail::NodeCacheArray<T>{nullptr};
   auto tree = detail::TreeType<T>{};

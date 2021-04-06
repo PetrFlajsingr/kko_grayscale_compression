@@ -62,11 +62,14 @@ struct BlockScanData {
     switch (scanMethod) {
       case ScanMethod::Vertical: pos = vertical(index, blockSize); break;
       case ScanMethod::Horizontal: pos = horizontal(index, blockSize); break;
-      case ScanMethod::ZigZag:
+      case ScanMethod::ZigZag: {
         const auto [newState, newPos] = zigZagMove(pos, zigZagState, blockSize.first, blockSize.second);
         zigZagState = newState;
         pos = newPos;
         break;
+      }
+      case ScanMethod::HilbertCurve: pos = hilbertCurve(index, blockSize); break;
+      case ScanMethod::MortonCurve: pos = mortonCurve(index, blockSize); break;
     }
   }
 

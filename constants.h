@@ -10,6 +10,9 @@
 namespace pf::kko {
 constexpr auto PADDING_MASK = 0b11100000;
 constexpr auto PADDING_SHIFT = 5;
+
+using Dimensions = std::pair<std::size_t, std::size_t>;
+
 }// namespace pf::kko
 
 #endif//HUFF_CODEC__CONSTANTS_H

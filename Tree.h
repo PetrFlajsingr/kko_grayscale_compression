@@ -9,8 +9,8 @@
 #define HUFF_CODEC__TREE_H
 
 #include "utils.h"
-#include <experimental/memory>
 #include <cassert>
+#include <experimental/memory>
 
 namespace pf::kko {
 /**
@@ -27,6 +27,13 @@ class Node {
   using const_pointer = const T *;
   explicit Node(value_type initValue, std::experimental::observer_ptr<Node> parent = nullptr)
       : value(initValue), parent(parent) {}
+
+  std::unique_ptr<Node> deepCopy(std::observer_ptr<Node> parent_ = nullptr) {
+    auto result = std::make_unique<Node>(value, parent_);
+    if (hasLeft()) { result->left = left->deepCopy(std::make_observer(result.get())); }
+    if (hasRight()) { result->right = left->deepCopy(std::make_observer(result.get())); }
+    return result;
+  }
 
   [[nodiscard]] reference operator*() { return value; }
   [[nodiscard]] const_reference operator*() const { return value; }
@@ -90,11 +97,16 @@ class Tree {
  public:
   Tree() = default;
   explicit Tree(typename Node<T>::value_type initValue) : root(std::make_unique<Node<T>>(initValue)) {}
+  Tree(const Tree &other) : root(other.root->deepCopy()) {}
+  Tree&operator=(const Tree &other) {
+    root = other.root->deepCopy();
+    return *this;
+  }
   Node<T> &getRoot() const { return *root; }
   void setRoot(std::unique_ptr<Node<T>> &&node) { root = std::move(node); }
-  std::experimental::observer_ptr<Node<T>> makeRoot(typename Node<T>::value_type initValue) {
+  Node<T> &makeRoot(typename Node<T>::value_type initValue) {
     root = std::make_unique<Node<T>>(initValue);
-    getRoot();
+    return getRoot();
   }
 
  private:

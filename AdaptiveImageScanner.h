@@ -8,144 +8,16 @@
 #ifndef HUFF_CODEC__ADAPTIVEIMAGESCANNER_H
 #define HUFF_CODEC__ADAPTIVEIMAGESCANNER_H
 
+#include "block_scorers.h"
+#include "image_traversal.h"
 #include "View2D.h"
+#include "constants.h"
 #include "magic_enum.hpp"
 #include "models.h"
 #include <ranges>
 #include <utility>
 
 namespace pf::kko {
-
-using Dimensions = std::pair<std::size_t, std::size_t>;
-
-/**
- * Description of requirements for object scoring block traversal suitability.
- */
-template<typename T, typename ValueType>
-concept BlockScorer = requires(T t, ValueType val) {
-  {t.next(val)};
-  { t.getScore() }
-  ->std::convertible_to<int>;
-  {t.reset()};
-  { T::MaxScore }
-  ->std::convertible_to<int>;
-};
-
-/**
- * Scoring data via similarity of neighboring values;
- */
-struct NeighborDifferenceScorer {
-  inline void next(uint8_t value) {
-    score -= std::abs(static_cast<int>(value) - lastVal);
-    lastVal = value;
-  }
-
-  [[nodiscard]] inline int getScore() const { return score; }
-
-  inline void reset() {
-    lastVal = 0;
-    score = MaxScore;
-  }
-  static constexpr auto MaxScore = std::numeric_limits<int>::max();
-  int lastVal{};
-  int score{};
-};
-
-/**
- * Scoring data via count of same neighboring values.
- */
-struct SameNeighborsScorer {
-  inline void next(uint8_t value) {
-    score -= value == lastVal ? 0 : 1;
-    lastVal = value;
-  }
-
-  [[nodiscard]] inline int getScore() const { return score; }
-
-  inline void reset() {
-    lastVal = 0;
-    score = MaxScore;
-  }
-  static constexpr auto MaxScore = std::numeric_limits<int>::max();
-  int lastVal{};
-  int score{};
-};
-
-/**
- * State of finite automaton providing indices for traversal.
- */
-enum class ZigZagState { Right, Down, LeftDown, RightUp };
-
-/**
- * Finite automaton providing indices for traversal
- * @param coord current coordinates
- * @param state current state
- * @param width width of data
- * @param height height of data
- * @return new state and new coordinates
- */
-inline std::pair<ZigZagState, Dimensions> zigZagMove(Dimensions coord, ZigZagState state, std::size_t width,
-                                                     std::size_t height) {
-  switch (state) {
-    case ZigZagState::Right:
-      ++coord.first;
-      if (coord.second == height - 1) {
-        return {ZigZagState::RightUp, coord};
-      } else {
-        return {ZigZagState::LeftDown, coord};
-      }
-    case ZigZagState::LeftDown:
-      --coord.first;
-      ++coord.second;
-      if (coord.second == height - 1) {
-        return {ZigZagState::Right, coord};
-      } else if (coord.first == 0) {
-        return {ZigZagState::Down, coord};
-      }
-      return {ZigZagState::LeftDown, coord};
-    case ZigZagState::Down:
-      ++coord.second;
-      if (coord.first == width - 1) {
-        return {ZigZagState::LeftDown, coord};
-      } else {
-        return {ZigZagState::RightUp, coord};
-      }
-    case ZigZagState::RightUp:
-      ++coord.first;
-      --coord.second;
-      if (coord.first == width - 1) {
-        return {ZigZagState::Down, coord};
-      } else if (coord.second == 0) {
-        return {ZigZagState::Right, coord};
-      }
-      return {ZigZagState::RightUp, coord};
-  }
-  throw std::runtime_error("Invalid state in zigZagMove");
-}
-
-/**
- * Provider of indices for horizontal traversal
- * @param index current index
- * @param blockDimensions size of block
- * @return
- */
-inline Dimensions horizontal(std::size_t index, const Dimensions &blockDimensions) {
-  const auto xPos = index % blockDimensions.first;
-  const auto yPos = index / blockDimensions.first;
-  return {xPos, yPos};
-}
-
-/**
- * Provider of indices for vertical traversal
- * @param index current index
- * @param blockDimensions size of block
- * @return
- */
-inline Dimensions vertical(std::size_t index, const Dimensions &blockDimensions) {
-  const auto yPos = index % blockDimensions.second;
-  const auto xPos = index / blockDimensions.second;
-  return {xPos, yPos};
-}
 
 /**
  * Calculate start position of block within data.
@@ -161,11 +33,10 @@ Dimensions startPosForBlock(std::size_t index, std::size_t imageWidth, Dimension
   const auto yBlockPos = index / imageBlockWidth;
   return {xBlockPos * blockDimensions.first, yBlockPos * blockDimensions.second};
 }
-
 /**
  * Supported types of block traversal.
  */
-enum class ScanMethod : uint8_t { Vertical = 0, Horizontal = 1, ZigZag = 2 };
+enum class ScanMethod : uint8_t { Vertical = 0, Horizontal = 1, ZigZag = 2, HilbertCurve = 3, MortonCurve = 4 };
 
 /**
  * Provider of Block objects, which represent blocks of data within supplied input data.
@@ -239,10 +110,10 @@ class AdaptiveImageScanner {
 template<std::ranges::contiguous_range R, BlockScorer<uint8_t> Scorer, Model<uint8_t> NeighborModel>
 class AdaptiveImageScanner<R, Scorer, NeighborModel>::Block {
  public:
-  Block()= default;;
-  Block(const View2D<R, true> &imageView, ScanMethod scanMethod, Dimensions startPosition,
-        Dimensions blockDimensions)
-      : imageView(imageView), scanMethod(scanMethod), startPosition(std::move(startPosition)), blockDimensions(std::move(blockDimensions)) {}
+  Block() = default;
+  Block(const View2D<R, true> &imageView, ScanMethod scanMethod, Dimensions startPosition, Dimensions blockDimensions)
+      : imageView(imageView), scanMethod(scanMethod), startPosition(std::move(startPosition)),
+        blockDimensions(std::move(blockDimensions)) {}
   bool operator==(const Block &rhs) const { return scanMethod == rhs.scanMethod && startPosition == rhs.startPosition; }
   bool operator!=(const Block &rhs) const { return !(rhs == *this); }
   [[nodiscard]] ScanMethod getScanMethod() const { return scanMethod; }
@@ -315,6 +186,8 @@ class AdaptiveImageScanner<R, Scorer, NeighborModel>::Block {
       case ScanMethod::Horizontal: return horizontal(index, blockDimensions);
       case ScanMethod::Vertical: return vertical(index, blockDimensions);
       case ScanMethod::ZigZag: throw std::runtime_error("Invalid code path");
+      case ScanMethod::HilbertCurve: return hilbertCurve(index, blockDimensions);
+      case ScanMethod::MortonCurve: return mortonCurve(index, blockDimensions);
     }
     throw "Only 'cause -Werror=return-type doesn't recognize, that this function always returns through switch";
   }
@@ -334,8 +207,8 @@ class AdaptiveImageScanner<R, Scorer, NeighborModel>::ImageBlockIterator {
   ImageBlockIterator() = default;
   ImageBlockIterator(const ImageBlockIterator &other) = default;
   ImageBlockIterator &operator=(const ImageBlockIterator &other) = default;
-  ImageBlockIterator(ImageBlockIterator &&other)  noexcept = default;
-  ImageBlockIterator &operator=(ImageBlockIterator &&other)  noexcept = default;
+  ImageBlockIterator(ImageBlockIterator &&other) noexcept = default;
+  ImageBlockIterator &operator=(ImageBlockIterator &&other) noexcept = default;
   ImageBlockIterator(AdaptiveImageScanner &scanner, std::size_t index) : scanner(&scanner), blockIndex(index) {}
 
   bool operator==(const ImageBlockIterator &rhs) const { return block == rhs.block; }

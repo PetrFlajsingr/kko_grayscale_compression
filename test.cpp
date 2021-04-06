@@ -22,6 +22,13 @@ using namespace pf::kko;
 
 
 int main() {
+
+ //for (std::size_t i = 0; i < 64; ++i) {
+ //  const auto pos = mortonCurve(i, {8, 8});
+ //  fmt::print("{}x{} ", pos.first, pos.second);
+ //}
+ //return 0;
+
   // clang-format off
   std::vector<uint8_t> data {
       1,2,3,4,5,6,7,8,  1,1,1,1,1,1,1,1,
@@ -33,20 +40,20 @@ int main() {
       1,2,3,4,5,6,7,8,  7,7,7,7,7,7,7,7,
       1,2,3,4,5,6,7,8,  8,8,8,8,8,8,8,8,
 
-      1,  2,  6,  7, 15, 16, 28, 29,        1,  2,  3,  4,  6,  7,  8,  9,
-      3,  5,  8, 14, 17, 27, 30, 43,        2,  3,  4,  5,  7,  8,  9, 10,
-      4,  9, 13, 18, 26, 31, 42, 44,        3,  4,  5,  7,  8,  9, 10, 11,
-      10, 12, 19, 25, 32, 41, 45, 54,       4,  5,  7,  8,  9, 10, 11, 12,
-      11, 20, 24, 33, 40, 46, 53, 55,       5,  7,  8,  9, 10, 11, 12, 13,
-      21, 23, 34, 39, 47, 52, 56, 61,       7,  8,  9, 10, 11, 12, 13, 14,
-      22, 35, 38, 48, 51, 57, 60, 62,       8,  9, 10, 11, 12, 13, 14, 15,
-      36, 37, 49, 50, 58, 59, 63, 64,       9, 10, 11, 12, 13, 14, 15, 16,
+       1,  1,  1,  1,  5,  5,  8,  8,       1,  2,  3,  4,  6,  7,  8,  9,
+       1,  1,  1,  1,  5,  5,  8,  8,       2,  3,  4,  5,  7,  8,  9, 10,
+       2,  2,  3,  3,  6,  6,  7,  7,       3,  4,  5,  7,  8,  9, 10, 11,
+       2,  2,  3,  3,  6,  6,  7,  7,       4,  5,  7,  8,  9, 10, 11, 12,
+      12, 12, 11, 11, 10, 10,  9,  9,       5,  7,  8,  9, 10, 11, 12, 13,
+      12, 12, 11, 11, 10, 10,  9,  9,       7,  8,  9, 10, 11, 12, 13, 14,
+      13, 13, 14, 14, 15, 15, 16, 16,       8,  9, 10, 11, 12, 13, 14, 15,
+      13, 13, 14, 14, 15, 15, 16, 16,       9, 10, 11, 12, 13, 14, 15, 16,
 
 
   };
   // clang-format on
 
-  /*
+
   auto scanner = AdaptiveImageScanner(data, 16, {8, 8}, SameNeighborsScorer{}, IdentityModel<uint8_t>{});
 
   for (auto &block : scanner) {
@@ -62,23 +69,7 @@ int main() {
     std::cout << std::endl;
   }
 
-  std::cout << "__________________________________\n";
 
-  auto scanner2 = AdaptiveImageScanner(data, 16, {8, 8}, SameNeighborsScorer{}, NeighborDifferenceModel<uint8_t>{});
-
-  for (auto &block : scanner2) {
-    std::size_t cnt = 0;
-    std::cout << magic_enum::enum_name(block.getScanMethod()) << std::endl;
-    for (auto symbol : block) {
-      std::cout << static_cast<int>(symbol) << "\t";
-      ++cnt;
-      if (cnt % scanner2.getBlockDimensions().first == 0) {
-        std::cout << std::endl;
-      }
-    }
-    std::cout << std::endl;
-  }
-*/
   /*
   std::mt19937 rng(1);
   std::discrete_distribution<> dist({1,2});
@@ -98,13 +89,13 @@ int main() {
   std::cout << "static: " << stat.size() << std::endl;
    */
 
-  auto adaptiveBlocks = encodeImageAdaptiveBlocks<uint8_t>(data, 16, NeighborDifferenceModel<uint8_t>{});
-
-  auto result = decodeImageAdaptiveBlocks<uint8_t>(adaptiveBlocks, NeighborDifferenceModel<uint8_t>{});
-  for (int i = 0; i < 16; ++i) {
-    for (int j = 0; j < 16; ++j) { std::cout << static_cast<int>(result.value()[i * 16 + j]) << "\t"; }
-    std::cout << std::endl;
-  }
+  //auto adaptiveBlocks = encodeImageAdaptiveBlocks<uint8_t>(data, 16, NeighborDifferenceModel<uint8_t>{});
+//
+  //auto result = decodeImageAdaptiveBlocks<uint8_t>(adaptiveBlocks, NeighborDifferenceModel<uint8_t>{});
+  //for (int i = 0; i < 16; ++i) {
+  //  for (int j = 0; j < 16; ++j) { std::cout << static_cast<int>(result.value()[i * 16 + j]) << "\t"; }
+  //  std::cout << std::endl;
+  //}
 
   return 0;
 }
