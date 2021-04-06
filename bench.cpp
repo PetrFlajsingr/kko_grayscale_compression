@@ -36,34 +36,34 @@ std::function<std::vector<uint8_t>(std::vector<uint8_t> &&)> getEncodeFnc(bool e
   if (enableStatic) {
     if (enableModel) {
       return [](auto &&data) {
-        return pf::kko::encodeStatic<uint8_t>(std::move(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
+        return pf::kko::encodeStatic<uint8_t>(std::forward<decltype(data)>(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
       };
     } else {
       return [](auto &&data) {
-        return pf::kko::encodeStatic<uint8_t>(std::move(data), pf::kko::IdentityModel<uint8_t>{});
+        return pf::kko::encodeStatic<uint8_t>(std::forward<decltype(data)>(data), pf::kko::IdentityModel<uint8_t>{});
       };
     }
   }
   if (!adaptive) {
     if (enableModel) {
       return [](auto &&data) {
-        return pf::kko::encodeAdaptive<uint8_t>(std::move(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
+        return pf::kko::encodeAdaptive<uint8_t>(std::forward<decltype(data)>(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
       };
     } else {
       return [](auto &&data) {
-        return pf::kko::encodeAdaptive<uint8_t>(std::move(data), pf::kko::IdentityModel<uint8_t>{});
+        return pf::kko::encodeAdaptive<uint8_t>(std::forward<decltype(data)>(data), pf::kko::IdentityModel<uint8_t>{});
       };
     }
   } else {
     const auto imgWidth = IMAGE_WIDTH;
     if (enableModel) {
       return [imgWidth](auto &&data) {
-        return pf::kko::encodeImageAdaptiveBlocks<uint8_t>(std::move(data), imgWidth,
+        return pf::kko::encodeImageAdaptiveBlocks<uint8_t>(std::forward<decltype(data)>(data), imgWidth,
                                                            pf::kko::NeighborDifferenceModel<uint8_t>{});
       };
     } else {
       return [imgWidth](auto &&data) {
-        return pf::kko::encodeImageAdaptiveBlocks<uint8_t>(std::move(data), imgWidth,
+        return pf::kko::encodeImageAdaptiveBlocks<uint8_t>(std::forward<decltype(data)>(data), imgWidth,
                                                            pf::kko::IdentityModel<uint8_t>{});
       };
     }
@@ -76,33 +76,33 @@ getDecodeFnc(bool enableStatic, bool enableModel, bool adaptive) {
   if (enableStatic) {
     if (enableModel) {
       return [](auto &&data) {
-        return pf::kko::decodeStatic<uint8_t>(std::move(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
+        return pf::kko::decodeStatic<uint8_t>(std::forward<decltype(data)>(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
       };
     } else {
       return [](auto &&data) {
-        return pf::kko::decodeStatic<uint8_t>(std::move(data), pf::kko::IdentityModel<uint8_t>{});
+        return pf::kko::decodeStatic<uint8_t>(std::forward<decltype(data)>(data), pf::kko::IdentityModel<uint8_t>{});
       };
     }
   }
   if (!adaptive) {
     if (enableModel) {
       return [](auto &&data) {
-        return pf::kko::decodeAdaptive<uint8_t>(std::move(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
+        return pf::kko::decodeAdaptive<uint8_t>(std::forward<decltype(data)>(data), pf::kko::NeighborDifferenceModel<uint8_t>{});
       };
     } else {
       return [](auto &&data) {
-        return pf::kko::decodeAdaptive<uint8_t>(std::move(data), pf::kko::IdentityModel<uint8_t>{});
+        return pf::kko::decodeAdaptive<uint8_t>(std::forward<decltype(data)>(data), pf::kko::IdentityModel<uint8_t>{});
       };
     }
   } else {
     if (enableModel) {
       return [](auto &&data) {
-        return pf::kko::decodeImageAdaptiveBlocks<uint8_t>(std::move(data),
+        return pf::kko::decodeImageAdaptiveBlocks<uint8_t>(std::forward<decltype(data)>(data),
                                                            pf::kko::NeighborDifferenceModel<uint8_t>{});
       };
     } else {
       return [](auto &&data) {
-        return pf::kko::decodeImageAdaptiveBlocks<uint8_t>(std::move(data), pf::kko::IdentityModel<uint8_t>{});
+        return pf::kko::decodeImageAdaptiveBlocks<uint8_t>(std::forward<decltype(data)>(data), pf::kko::IdentityModel<uint8_t>{});
       };
     }
   }
@@ -127,7 +127,7 @@ std::optional<argparse::ArgumentParser> parseArgs(std::span<char *> args) {
   return parser;
 }
 
-void benchFile(std::string fileName, const std::vector<uint8_t> &data) {
+void benchFile(const std::string& fileName, const std::vector<uint8_t> &data) {
   using namespace ankerl::nanobench;
   {// encodes
     auto bench = Bench();
@@ -199,7 +199,7 @@ void benchFile(std::string fileName, const std::vector<uint8_t> &data) {
   }
 }
 
-void testValidity(std::string fileName, const std::vector<uint8_t> &data) {
+void testValidity(const std::string& fileName, const std::vector<uint8_t> &data) {
   using namespace std::string_literals;
   auto cmp = [](const auto &a, const auto &b) {
     if (a.size() != b.size()) { return "wrong length"s; }
@@ -212,39 +212,45 @@ void testValidity(std::string fileName, const std::vector<uint8_t> &data) {
 
   auto d = data;
   auto encoded1 = getEncodeFnc(true, false, false)(std::move(d));
+  const auto encoded1Size = encoded1.size();
   const auto decoded1 = *getDecodeFnc(true, false, false)(std::move(encoded1));
   std::cout << "huffman static no model: " << cmp(decoded1, data) << " original size: " << data.size()
-            << "[B] new size: " << encoded1.size() << "[B] BPC: " << countBitsPerCharacter(data.size(), encoded1.size())
+            << "[B] new size: " << encoded1Size << "[B] BPC: " << countBitsPerCharacter(data.size(), encoded1Size)
             << std::endl;
   d = data;
   auto encoded2 = getEncodeFnc(true, true, false)(std::move(d));
+  const auto encoded2Size = encoded2.size();
   const auto decoded2 = *getDecodeFnc(true, true, false)(std::move(encoded2));
   std::cout << "huffman static model: " << cmp(decoded2, data) << " original size: " << data.size()
-            << "[B] new size: " << encoded2.size() << "[B] BPC: " << countBitsPerCharacter(data.size(), encoded2.size())
+            << "[B] new size: " << encoded2Size << "[B] BPC: " << countBitsPerCharacter(data.size(), encoded2Size)
             << std::endl;
   d = data;
   auto encoded3 = getEncodeFnc(false, false, false)(std::move(d));
+  const auto encoded3Size = encoded3.size();
   const auto decoded3 = *getDecodeFnc(false, false, false)(std::move(encoded3));
   std::cout << "huffman adaptive no model: " << cmp(decoded3, data) << " original size: " << data.size()
-            << "[B] new size: " << encoded3.size() << "[B] BPC: " << countBitsPerCharacter(data.size(), encoded3.size())
+            << "[B] new size: " << encoded3Size << "[B] BPC: " << countBitsPerCharacter(data.size(), encoded3Size)
             << std::endl;
   d = data;
   auto encoded4 = getEncodeFnc(false, true, false)(std::move(d));
+  const auto encoded4Size = encoded4.size();
   const auto decoded4 = *getDecodeFnc(false, true, false)(std::move(encoded4));
   std::cout << "huffman adaptive model: " << cmp(decoded4, data) << " original size: " << data.size()
-            << "[B] new size: " << encoded4.size() << "[B] BPC: " << countBitsPerCharacter(data.size(), encoded4.size())
+            << "[B] new size: " << encoded4Size << "[B] BPC: " << countBitsPerCharacter(data.size(), encoded4Size)
             << std::endl;
   d = data;
   auto encoded5 = getEncodeFnc(false, false, true)(std::move(d));
+  const auto encoded5Size = encoded5.size();
   const auto decoded5 = *getDecodeFnc(false, false, true)(std::move(encoded5));
   std::cout << "huffman adaptive adaptive no model: " << cmp(decoded5, data) << " original size: " << data.size()
-            << "[B] new size: " << encoded5.size() << "[B] BPC: " << countBitsPerCharacter(data.size(), encoded5.size())
+            << "[B] new size: " << encoded5Size << "[B] BPC: " << countBitsPerCharacter(data.size(), encoded5Size)
             << std::endl;
   d = data;
   auto encoded6 = getEncodeFnc(false, true, true)(std::move(d));
+  const auto encoded6Size = encoded6.size();
   const auto decoded6 = *getDecodeFnc(false, true, true)(std::move(encoded6));
   std::cout << "huffman adaptive adaptive model: " << cmp(decoded6, data) << " original size: " << data.size()
-            << "[B] new size: " << encoded6.size() << "[B] BPC: " << countBitsPerCharacter(data.size(), encoded6.size())
+            << "[B] new size: " << encoded6Size << "[B] BPC: " << countBitsPerCharacter(data.size(), encoded6Size)
             << std::endl;
   std::cout << "_______________________________________________________________" << std::endl;
 }
@@ -261,7 +267,7 @@ int main(int argc, char **argv) {
   auto inputData = std::vector<std::pair<std::string, std::vector<uint8_t>>>();
   for (const auto &entry : std::filesystem::directory_iterator(dataDir)) {
     if (entry.is_regular_file()) {
-      inputData.emplace_back(entry.path().filename(), RawGrayscaleImageDataReader(entry, IMAGE_WIDTH).readAllRaw());
+      inputData.emplace_back(entry.path().filename().string(), RawGrayscaleImageDataReader(entry, IMAGE_WIDTH).readAllRaw());
     }
   }
   std::ranges::sort(inputData, [](const auto &lhs, const auto &rhs) { return lhs.first < rhs.first; });

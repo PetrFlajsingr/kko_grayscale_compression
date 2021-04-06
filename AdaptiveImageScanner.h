@@ -12,6 +12,7 @@
 #include "magic_enum.hpp"
 #include "models.h"
 #include <ranges>
+#include <utility>
 
 namespace pf::kko {
 
@@ -180,11 +181,11 @@ class AdaptiveImageScanner {
   class ImageBlockIterator;
 
   AdaptiveImageScanner(View2D<R, true> view, Dimensions blockSize, Scorer &&scorer, NeighborModel &&model)
-      : imageView(view), blockDimensions(blockSize), blockScorer(std::forward<Scorer>(scorer)),
+      : imageView(view), blockDimensions(std::move(blockSize)), blockScorer(std::forward<Scorer>(scorer)),
         model(std::forward<NeighborModel>(model)) {}
   AdaptiveImageScanner(const R &data, std::size_t imgWidth, Dimensions blockSize, Scorer &&scorer,
                        NeighborModel &&model)
-      : imageView(data, imgWidth), blockDimensions(blockSize), blockScorer(std::forward<Scorer>(scorer)),
+      : imageView(data, imgWidth), blockDimensions(std::move(blockSize)), blockScorer(std::forward<Scorer>(scorer)),
         model(std::forward<NeighborModel>(model)) {}
 
   [[nodiscard]] ImageBlockIterator begin() { return ImageBlockIterator{*this, 0}; }
@@ -198,7 +199,7 @@ class AdaptiveImageScanner {
   [[nodiscard]] const Dimensions &getBlockDimensions() const { return blockDimensions; }
 
  private:
-  std::size_t getBlockCount() const {
+  [[nodiscard]] std::size_t getBlockCount() const {
     const auto imageBlockWidth =
         static_cast<std::size_t>(std::ceil(imageView.getWidth() / static_cast<float>(blockDimensions.first)));
     const auto imageBlockHeight =
@@ -238,10 +239,10 @@ class AdaptiveImageScanner {
 template<std::ranges::contiguous_range R, BlockScorer<uint8_t> Scorer, Model<uint8_t> NeighborModel>
 class AdaptiveImageScanner<R, Scorer, NeighborModel>::Block {
  public:
-  Block(){};
-  Block(const View2D<R, true> &imageView, ScanMethod scanMethod, const Dimensions &startPosition,
-        const Dimensions &blockDimensions)
-      : imageView(imageView), scanMethod(scanMethod), startPosition(startPosition), blockDimensions(blockDimensions) {}
+  Block()= default;;
+  Block(const View2D<R, true> &imageView, ScanMethod scanMethod, Dimensions startPosition,
+        Dimensions blockDimensions)
+      : imageView(imageView), scanMethod(scanMethod), startPosition(std::move(startPosition)), blockDimensions(std::move(blockDimensions)) {}
   bool operator==(const Block &rhs) const { return scanMethod == rhs.scanMethod && startPosition == rhs.startPosition; }
   bool operator!=(const Block &rhs) const { return !(rhs == *this); }
   [[nodiscard]] ScanMethod getScanMethod() const { return scanMethod; }
@@ -250,8 +251,8 @@ class AdaptiveImageScanner<R, Scorer, NeighborModel>::Block {
   class Sentinel {
    public:
     Sentinel() = default;
-    Sentinel(size_t size) : size(size) {}
-    std::size_t getSize() const { return size; }
+    explicit Sentinel(size_t size) : size(size) {}
+    [[nodiscard]] std::size_t getSize() const { return size; }
 
    private:
     std::size_t size{};
@@ -262,7 +263,7 @@ class AdaptiveImageScanner<R, Scorer, NeighborModel>::Block {
     using difference_type = int;
     using reference = const uint8_t &;
     Iterator() = default;
-    Iterator(std::observer_ptr<Block> block) : block(block), model(block->model) {}
+    explicit Iterator(std::observer_ptr<Block> block) : block(block), model(block->model) {}
     bool operator==(const Iterator &rhs) const { return block == rhs.block && currentIndex == rhs.currentIndex; }
     bool operator!=(const Iterator &rhs) const { return !(rhs == *this); }
     bool operator==(const Sentinel &other) const { return currentIndex == other.getSize(); }
@@ -305,11 +306,11 @@ class AdaptiveImageScanner<R, Scorer, NeighborModel>::Block {
   [[nodiscard]] Sentinel end() { return Sentinel(blockDimensions.first * blockDimensions.second); }
 
  private:
-  Dimensions getPosInView(std::size_t index) const {
+  [[nodiscard]] Dimensions getPosInView(std::size_t index) const {
     const auto posInBlock = getPosInBlock(index);
     return {startPosition.first + posInBlock.first, startPosition.second + posInBlock.second};
   }
-  Dimensions getPosInBlock(std::size_t index) const {
+  [[nodiscard]] Dimensions getPosInBlock(std::size_t index) const {
     switch (scanMethod) {
       case ScanMethod::Horizontal: return horizontal(index, blockDimensions);
       case ScanMethod::Vertical: return vertical(index, blockDimensions);
@@ -333,8 +334,8 @@ class AdaptiveImageScanner<R, Scorer, NeighborModel>::ImageBlockIterator {
   ImageBlockIterator() = default;
   ImageBlockIterator(const ImageBlockIterator &other) = default;
   ImageBlockIterator &operator=(const ImageBlockIterator &other) = default;
-  ImageBlockIterator(ImageBlockIterator &&other) = default;
-  ImageBlockIterator &operator=(ImageBlockIterator &&other) = default;
+  ImageBlockIterator(ImageBlockIterator &&other)  noexcept = default;
+  ImageBlockIterator &operator=(ImageBlockIterator &&other)  noexcept = default;
   ImageBlockIterator(AdaptiveImageScanner &scanner, std::size_t index) : scanner(&scanner), blockIndex(index) {}
 
   bool operator==(const ImageBlockIterator &rhs) const { return block == rhs.block; }
@@ -361,7 +362,7 @@ class AdaptiveImageScanner<R, Scorer, NeighborModel>::ImageBlockIterator {
  private:
   std::observer_ptr<AdaptiveImageScanner> scanner = nullptr;
   mutable Block block;
-  std::size_t blockIndex;
+  std::size_t blockIndex{};
   mutable bool isInit = false;
 };
 
@@ -369,9 +370,9 @@ template<std::ranges::contiguous_range R, BlockScorer<uint8_t> Scorer, Model<uin
 struct AdaptiveImageScanner<R, Scorer, NeighborModel>::ImageBlockIteratorSentinel {
  public:
   ImageBlockIteratorSentinel() = default;
-  ImageBlockIteratorSentinel(size_t size) : size(size) {}
+  explicit ImageBlockIteratorSentinel(size_t size) : size(size) {}
 
-  std::size_t getSize() const { return size; }
+  [[nodiscard]] std::size_t getSize() const { return size; }
 
  private:
   std::size_t size;

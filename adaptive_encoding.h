@@ -44,7 +44,7 @@ std::vector<bool> getPathToSymbol(detail::NodeType<T> &root, detail::NodeType<T>
     if (detail::getPathToSymbolImpl(root.getLeft(), targetNode, result)) { result.emplace_back(false); }
   }
   if (result.empty() && root.hasRight()) {
-    if (detail::getPathToSymbolImpl(root.getRight(), targetNode, result)) { result.emplace_back(true); };
+    if (detail::getPathToSymbolImpl(root.getRight(), targetNode, result)) { result.emplace_back(true); }
   }
   std::reverse(result.begin(), result.end());
   return result;

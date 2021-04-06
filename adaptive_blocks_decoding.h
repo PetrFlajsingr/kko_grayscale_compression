@@ -37,11 +37,11 @@ struct ImageHeaderBuilder {
     ++bytesRead;
   }
 
-  [[nodiscard]] bool isDone() { return bytesRead == 6; }
+  [[nodiscard]] bool isDone() const { return bytesRead == 6; }
 };
 
 struct BlockHeader {
-  ScanMethod scanMethod;
+  ScanMethod scanMethod{};
   uint8_t bitsRead{};
 };
 
@@ -70,7 +70,7 @@ struct BlockScanData {
     }
   }
 
-  inline Dimensions getPosInData() {
+  inline Dimensions getPosInData() const {
     auto result = startPosForBlock(blockIndex, imageWidth, blockSize);
     result.first += pos.first;
     result.second += pos.second;
