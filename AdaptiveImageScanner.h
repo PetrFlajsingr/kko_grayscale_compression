@@ -28,7 +28,7 @@ namespace pf::kko {
  */
 Dimensions startPosForBlock(std::size_t index, std::size_t imageWidth, Dimensions blockDimensions) {
   const auto imageBlockWidth =
-      static_cast<std::size_t>(std::ceil(imageWidth / static_cast<float>(blockDimensions.first)));
+      static_cast<std::size_t>(std::ceil(static_cast<float>(imageWidth) / static_cast<float>(blockDimensions.first)));
   const auto xBlockPos = index % imageBlockWidth;
   const auto yBlockPos = index / imageBlockWidth;
   return {xBlockPos * blockDimensions.first, yBlockPos * blockDimensions.second};

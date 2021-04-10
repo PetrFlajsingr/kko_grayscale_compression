@@ -43,12 +43,6 @@ std::vector<uint8_t> encodeImageAdaptiveBlocks(std::ranges::forward_range auto &
   tree.setRoot(makeUniqueNode(makeNYTAdaptive<T>()));
   auto nytNode = std::make_observer(&tree.getRoot());
 
-  [[maybe_unused]] const auto resetTree = [&] {
-    std::ranges::fill(symbolNodes, nullptr);
-    tree.setRoot(makeUniqueNode(makeNYTAdaptive<T>()));
-    nytNode = std::make_observer(&tree.getRoot());
-  };
-
   spdlog::trace("Tree initialised");
 
   auto binEncoder = BinaryEncoder<uint8_t>{};
@@ -64,7 +58,6 @@ std::vector<uint8_t> encodeImageAdaptiveBlocks(std::ranges::forward_range auto &
   for (auto &block : scanner) {
     // save block info (scan method type)
     binEncoder.pushBack(typeToBits(block.getScanMethod(), 3));
-    //resetTree();
     for (auto symbol : block) {
       auto code = std::vector<bool>{};
       if (symbolNodes[symbol] != nullptr) {

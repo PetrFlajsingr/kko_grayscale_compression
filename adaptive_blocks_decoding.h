@@ -73,7 +73,7 @@ struct BlockScanData {
     }
   }
 
-  inline Dimensions getPosInData() const {
+  [[nodiscard]] inline Dimensions getPosInData() const {
     auto result = startPosForBlock(blockIndex, imageWidth, blockSize);
     result.first += pos.first;
     result.second += pos.second;
