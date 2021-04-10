@@ -6,6 +6,8 @@ list(APPEND flags "-fconcepts" "-fconcepts-diagnostics-depth=10" "-fcoroutines" 
         "-Wall" "-Wextra" "-Werror" "-Wpedantic" "-Wno-unknown-pragmas" "-Wno-unused-function"
         "-Wpointer-arith" "-Wno-cast-qual" "-Wno-type-limits" "-Wno-strict-aliasing" "-g")
 
+add_compile_definitions(ENABLE_LOG)
+
 if (CMAKE_BUILD_TYPE MATCHES Debug)
     message(" ")
     message("CMAKE IN DEBUG MODE")

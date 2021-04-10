@@ -24,7 +24,12 @@
 #include <span>
 
 // ovladani logovani - zapisuje pouze do stdout
-#define ENABLE_LOG NDEBUG
+#ifdef ENABLE_LOG
+#undef ENABLE_LOG
+#define ENABLE_LOG 1
+#else
+#define ENABLE_LOG 0
+#endif
 
 enum class AppMode { Compress, Decompress };
 enum class CompressionType { Static, Adaptive };
