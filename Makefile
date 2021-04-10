@@ -1,4 +1,4 @@
-CXX=g++-10 #g++-10.2 for merlin
+CXX=g++-10.2 #g++-10.2 for merlin
 CXXFLAGS= -std=c++20 -fconcepts -fconcepts-diagnostics-depth=10 -Werror=return-type -Wall -Wextra -Werror\
  -Wpedantic -Wno-unknown-pragmas -Wno-unused-function -Wpointer-arith -Wno-cast-qual -Wno-type-limits\
  -Wno-strict-aliasing -O3 -g
